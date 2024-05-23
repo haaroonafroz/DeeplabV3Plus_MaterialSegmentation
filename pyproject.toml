@@ -3,12 +3,12 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dlcv"
-version = "0.0.3"
+name = "HTCV_DeeplabV3_v1"
+version = "0.0.1"
 authors = [
-  { name="Arno Nhym", email="arno.nhym@uni-weimar.de" },
+  { name="Haaroon Afroz", email="haaroon.afroz.ognawala@uni-weimar.de" },
 ]
-description = "Third DLCV example package"
+description = "First attempt at using DeeplabV3 CNN architecture for semantic material segmentation"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -17,5 +17,5 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn"
+    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn", "pyyaml", "yacs"
 ]
