@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dlcv"
+version = "0.0.3"
+authors = [
+  { name="Arno Nhym", email="arno.nhym@uni-weimar.de" },
+]
+description = "Third DLCV example package"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn"
+]
