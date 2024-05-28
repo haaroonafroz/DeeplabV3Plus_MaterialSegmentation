@@ -1,6 +1,7 @@
 import csv
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +9,38 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 # ToDo import functions
+def cross_entropy_4d(input, target):
+    """
+    Custom cross-entropy loss function that supports 4D targets.
+
+    Args:
+        input (Tensor): Predictions from the model.
+        target (Tensor): Ground truth labels.
+
+    Returns:
+        Tensor: Computed loss.
+    """
+    assert input.size() == target.size(), "Input and target shapes must match"
+    
+    # Flatten the tensors to be 2D for compatibility with F.cross_entropy
+    input = input.view(-1, input.size(-1))
+    target = target.view(-1, target.size(-1))
+
+    return F.cross_entropy(input, target)
+
+class CustomLoss(nn.Module):
+    def __init__(self):
+        super(CustomLoss, self).__init__()
+
+    def forward(self, input, target):
+        # Ensure that both input and target have the same shape
+        assert input.shape == target.shape, "Input and target shapes must match"
+        
+        # Calculate the loss using your custom logic
+        # Here we provide a simple example of mean squared error (MSE) loss
+        loss = torch.mean((input - target)**2)
+        
+        return loss
 
 def load_pretrained_weights(network, weights_path, device):
     """
@@ -81,7 +114,7 @@ def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=Non
     return param_groups
     pass  # ToDo
 
-def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0):
+def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 500)):
     """
     Creates a torchvision transform pipeline for training and testing datasets. For training, augmentations
     such as horizontal flipping and random rotation can be included. For testing, only essential transformations
@@ -108,6 +141,9 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0):
         # Add random rotation with the given range of degrees
             transform_list.append(transforms.RandomRotation(degrees=rotation_degrees))
 
+    # Resize images
+    transform_list.append(transforms.Resize(resize))
+    
     # Convert the image to a tensor
     transform_list.append(transforms.ToTensor())
 
@@ -119,7 +155,12 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0):
     composed_transform = transforms.Compose(transform_list)
 
     return composed_transform
-    pass  # ToDo
+    #pass  # ToDo
+def get_target_transform():
+    return transforms.Compose([
+        transforms.Resize((375, 500)),
+        transforms.ToTensor()
+    ])
 
 def write_results_to_csv(file_path, train_losses, test_losses, test_accuracies):
     """
