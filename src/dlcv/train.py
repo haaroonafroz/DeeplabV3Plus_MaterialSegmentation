@@ -43,8 +43,8 @@ def main(cfg):
     train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
 
-    weights = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
-    model = DeepLabV3Model(weights= weights, num_classes=cfg.MODEL.NUM_CLASSES)
+    #weights = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
+    model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
     model.to(device)
 
     if cfg.MISC.PRETRAINED_WEIGHTS:
