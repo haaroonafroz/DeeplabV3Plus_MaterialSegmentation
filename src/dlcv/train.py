@@ -9,7 +9,6 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
 from torchvision.datasets import VOCSegmentation
 from torchvision.models.segmentation import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
-#from torchvision.datasets import Food101
 import torchvision.transforms as transforms
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -32,13 +31,14 @@ def main(cfg):
     print(cfg.dump())
 
     device = torch.device("cuda" if torch.cuda.is_available() and not cfg.MISC.NO_CUDA else "cpu")
+    print(f"Device: {device}")
 
     train_transform = get_transforms(train=True, horizontal_flip_prob=cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB, rotation_degrees=cfg.AUGMENTATION.ROTATION_DEGREES)
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=True, transform=train_transform, target_transform=target_transform)
-    test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=True, transform=test_transform, target_transform=target_transform)
+    train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=False, transform=train_transform, target_transform=target_transform)
+    test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=False, transform=test_transform, target_transform=target_transform)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
@@ -56,8 +56,11 @@ def main(cfg):
     optimizer = Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-    train_losses, test_losses, test_accuracies = train_and_evaluate_model(
-        model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler, early_stopping=cfg.TRAIN.EARLY_STOPPING
+    train_losses, test_losses, test_accuracies = train_and_evaluate_model(model, train_loader, test_loader,
+                                                                           cross_entropy_4d, optimizer,
+                                                                        cfg.TRAIN.NUM_EPOCHS, device,
+                                                                        scheduler=scheduler,
+                                                                        early_stopping=cfg.TRAIN.EARLY_STOPPING
     )
 
     write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
@@ -70,7 +73,19 @@ def main(cfg):
         f.write(cfg.dump())
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Train and Evaluate a model")
+    parser.add_argument('--config', type=str, help="Path to the config file")
+    args = parser.parse_args()
+    
     cfg = get_cfg_defaults()
-    config_file_path = os.getenv('CONFIG_FILE', 'config/config1.yaml')
+
+    # Check if the script is run with the command-line argument or from the notebook
+    if args.config:
+        config_file_path = args.config
+    else:
+        # Fallback to an environment variable or a default config path
+        config_file_path = os.getenv('CONFIG_FILE', 'configs/kaggle_test1.yaml')
+
+    cfg.CONFIG_FILE_PATH = config_file_path
     cfg.merge_from_file(config_file_path)
     main(cfg)

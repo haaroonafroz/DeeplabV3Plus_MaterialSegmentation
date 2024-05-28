@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.dlcv.utils import plot_multiple_losses_and_accuracies
+from dlcv.utils import plot_multiple_losses_and_accuracies
 
 def read_csv_data(filepath):
     """

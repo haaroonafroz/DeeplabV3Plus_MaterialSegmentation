@@ -160,7 +160,7 @@ cython_debug/
 .idea/
 
 # Project specific .gitignore
-saved_models/
+#saved_models/
 data/
 *.csv
 dlcv24_2_env/

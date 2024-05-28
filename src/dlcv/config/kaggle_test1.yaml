@@ -1,0 +1,24 @@
+DATA:
+  DATASET: 'VOCSegmentation'
+  ROOT: '/kaggle/input/pascal-voc-2012'
+
+MODEL:
+  NUM_CLASSES: 21
+
+MISC:
+  RUN_NAME: 'PASCALVOC_testRun'
+  RESULTS_CSV: '/kaggle/working/repository_content/results'
+  SAVE_MODEL_PATH: '/kaggle/working/repository_content/saved_models'
+  PRETRAINED_WEIGHTS: ''
+
+TRAIN:
+  BASE_LR: 0.001
+  MILESTONES: [10, 20]
+  GAMMA: 0.1
+  BATCH_SIZE: 64
+  NUM_EPOCHS: 10
+  EARLY_STOPPING: False
+
+AUGMENTATION:
+  HORIZONTAL_FLIP_PROB: 0.5
+  ROTATION_DEGREES: 10

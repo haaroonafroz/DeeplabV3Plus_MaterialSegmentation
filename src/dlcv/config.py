@@ -24,7 +24,7 @@ def get_cfg_defaults():
     _C.TRAIN.BASE_LR = 0.001
     _C.TRAIN.MILESTONES = [10, 20]
     _C.TRAIN.GAMMA = 0.1
-    _C.TRAIN.BATCH_SIZE = 8
+    _C.TRAIN.BATCH_SIZE = 64
     _C.TRAIN.NUM_EPOCHS = 50
     _C.TRAIN.EARLY_STOPPING = False
 
@@ -43,3 +43,16 @@ def get_cfg_defaults():
     _C.MISC.NO_CUDA = False
 
     return _C.clone()
+
+def get_cfg_from_file(cfg_file):
+    """
+    Load configuration from a file.
+    Args:
+        cfg_file (str): Path to the configuration file.
+    Returns:
+        CfgNode: Configuration object.
+    """
+    cfg = get_cfg_defaults()
+    cfg.merge_from_file(cfg_file)
+    cfg.freeze()
+    return cfg
