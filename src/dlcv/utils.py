@@ -20,7 +20,7 @@ def cross_entropy_4d(input, target):
     Returns:
         Tensor: Computed loss.
     """
-    print(f"Input shape: {input.shape}, Target shape: {target.shape}")
+    #print(f"Input shape: {input.shape}, Target shape: {target.shape}")
 
     # If target has a channel dimension, squeeze it
     if target.ndimension() == 4 and target.size(1) == 1:

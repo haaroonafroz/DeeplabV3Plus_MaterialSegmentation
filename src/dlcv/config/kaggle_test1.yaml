@@ -10,13 +10,14 @@ MISC:
   RESULTS_CSV: '/kaggle/working/repository_content/results'
   SAVE_MODEL_PATH: '/kaggle/working/repository_content/saved_models'
   PRETRAINED_WEIGHTS: ''
+  NO_CUDA: False
 
 TRAIN:
   BASE_LR: 0.001
   MILESTONES: [10, 20]
   GAMMA: 0.1
   BATCH_SIZE: 64
-  NUM_EPOCHS: 10
+  NUM_EPOCHS: 5
   EARLY_STOPPING: False
 
 AUGMENTATION:

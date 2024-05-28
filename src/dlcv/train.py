@@ -37,8 +37,8 @@ def main(cfg):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=False, transform=train_transform, target_transform=target_transform)
-    test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=False, transform=test_transform, target_transform=target_transform)
+    train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=True, transform=train_transform, target_transform=target_transform)
+    test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=True, transform=test_transform, target_transform=target_transform)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
@@ -66,7 +66,7 @@ def main(cfg):
     write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
 
     if cfg.MISC.SAVE_MODEL_PATH:
-        save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME + ".pth")
+        save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
 
     config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
     with open(config_save_path, 'w') as f:
