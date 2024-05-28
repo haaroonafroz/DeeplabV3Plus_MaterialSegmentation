@@ -61,7 +61,13 @@ def evaluate_one_epoch(model, data_loader, device):
     with torch.no_grad():  # Disable gradient calculation during evaluation
         for inputs, targets in tqdm(data_loader, desc="Evaluation"):
             inputs, targets = inputs.to(device), targets.to(device)  # Move data to the appropriate device
+            
+            # If target has a channel dimension, squeeze it
+            if targets.ndimension() == 4 and targets.size(1) == 1:
+                targets = targets.squeeze(1)
 
+            # Ensure the target is of type Long
+            targets = targets.long()
             # Forward pass
             outputs = model(inputs)
             loss = cross_entropy_4d(outputs, targets)
@@ -110,3 +116,4 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
         print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
 
     return train_losses, test_losses, test_accuracies
+

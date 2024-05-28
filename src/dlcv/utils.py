@@ -11,20 +11,29 @@ import seaborn as sns
 # ToDo import functions
 def cross_entropy_4d(input, target):
     """
-    Custom cross-entropy loss function that supports 4D targets.
-
+    Custom cross-entropy loss function for segmentation that supports 4D targets.
+    
     Args:
-        input (Tensor): Predictions from the model.
-        target (Tensor): Ground truth labels.
-
+        input (Tensor): Predictions from the model of shape [batch_size, num_classes, height, width].
+        target (Tensor): Ground truth labels of shape [batch_size, height, width].
+    
     Returns:
         Tensor: Computed loss.
     """
-    assert input.size() == target.size(), "Input and target shapes must match"
+    print(f"Input shape: {input.shape}, Target shape: {target.shape}")
+
+    # If target has a channel dimension, squeeze it
+    if target.ndimension() == 4 and target.size(1) == 1:
+        target = target.squeeze(1)
     
+    # Ensure the target is of type Long
+    target = target.long() 
+
     # Flatten the tensors to be 2D for compatibility with F.cross_entropy
-    input = input.view(-1, input.size(-1))
-    target = target.view(-1, target.size(-1))
+    # input needs to be [N, C] where N is the number of pixels and C is the number of classes
+    # target needs to be [N] where N is the number of pixels
+    input = input.permute(0, 2, 3, 1).contiguous().view(-1, input.size(1))
+    target = target.view(-1)
 
     return F.cross_entropy(input, target)
 
