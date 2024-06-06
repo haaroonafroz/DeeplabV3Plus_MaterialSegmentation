@@ -24,7 +24,7 @@ def sum(a, b):
     x=a+b
     return x
 
-def main(cfg, mode):
+def main(cfg, mode, image_path=None):
     print(f"Using configuration file: {config_file_path}")
     print("Configuration for this run:")
     print(cfg.dump())
@@ -36,67 +36,86 @@ def main(cfg, mode):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=True, transform=train_transform, target_transform=target_transform)
-    test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=True, transform=test_transform, target_transform=target_transform)
+    if mode == 'single_image':
+        if image_path is None:
+            raise ValueError("Image path must be provided for single image mode")
+        
+        model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
+        model.to(device)
 
-    train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
+        if cfg.MISC.PRETRAINED_WEIGHTS:
+            model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-    #weights = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
-    model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
-    model.to(device)
+        predict_and_visualize(model, image_path, device)
 
-    if cfg.MISC.PRETRAINED_WEIGHTS:
-        model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-    # if cfg.MISC.FROZEN_LAYERS:
-    #     freeze_layers(model, cfg.MISC.FROZEN_LAYERS)
+    else:
+        train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=True, transform=train_transform, target_transform=target_transform)
+        test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=True, transform=test_transform, target_transform=target_transform)
 
-    # optimizer = Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
+        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
+        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
 
-    # train_losses, test_losses, test_accuracies = train_and_evaluate_model(model, train_loader, test_loader,
-    #                                                                        cross_entropy_4d, optimizer,
-    #                                                                     cfg.TRAIN.NUM_EPOCHS, device,
-    #                                                                     scheduler=scheduler,
-    #                                                                     early_stopping=cfg.TRAIN.EARLY_STOPPING
-    # )
+        #weights = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
+        model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
+        model.to(device)
 
-    # write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
+        if cfg.MISC.PRETRAINED_WEIGHTS:
+            model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-    # if cfg.MISC.SAVE_MODEL_PATH:
-    #     save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
+        # if cfg.MISC.FROZEN_LAYERS:
+        #     freeze_layers(model, cfg.MISC.FROZEN_LAYERS)
 
-    # config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
-    # with open(config_save_path, 'w') as f:
-    #     f.write(cfg.dump())
+        # optimizer = Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-# -------------------------------------------------------------------------------------------------------
+        # train_losses, test_losses, test_accuracies = train_and_evaluate_model(model, train_loader, test_loader,
+        #                                                                        cross_entropy_4d, optimizer,
+        #                                                                     cfg.TRAIN.NUM_EPOCHS, device,
+        #                                                                     scheduler=scheduler,
+        #                                                                     early_stopping=cfg.TRAIN.EARLY_STOPPING
+        # )
 
-    if mode == 'train':
-        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
+        # write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
 
-        train_losses, test_losses, test_accuracies = train_and_evaluate_model(
-            model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
-            early_stopping=cfg.TRAIN.EARLY_STOPPING)
+        # if cfg.MISC.SAVE_MODEL_PATH:
+        #     save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
 
-        write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
+        # config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
+        # with open(config_save_path, 'w') as f:
+        #     f.write(cfg.dump())
 
-        if cfg.MISC.SAVE_MODEL_PATH:
-            save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME + ".pth")
+    # -------------------------------------------------------------------------------------------------------
 
-        config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
-        with open(config_save_path, 'w') as f:
-            f.write(cfg.dump())
+        if mode == 'train':
+            optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-    elif mode == 'test':
-        test_loss, test_accuracy = evaluate_one_epoch(model, test_loader, device)
-        print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+            train_losses, test_losses, test_accuracies = train_and_evaluate_model(
+                model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
+                early_stopping=cfg.TRAIN.EARLY_STOPPING)
+            
+            print(f"Train Loss: {train_losses:.4f}, Test Loss: {test_losses:.4f}. Test Accuracy: {test_accuracy:.4f}")
+            
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_accuracies)
+
+            if cfg.MISC.SAVE_MODEL_PATH:
+                save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME + ".pth")
+
+            config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
+            with open(config_save_path, 'w') as f:
+                f.write(cfg.dump())
+
+        elif mode == 'test':
+            test_loss, test_accuracy, test_iou = evaluate_one_epoch(model, test_loader, device)
+            print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}, Test IoU: {test_iou:.4f}")
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, test_loss, test_accuracy, test_iou)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train and Evaluate a model")
     parser.add_argument('--config', type=str, help="Path to the config file")
+    parser.add_argument('--image_path', type=str, help="Path to the input image for 'single_image' mode")
     parser.add_argument('--mode', type=str, required=True, choices=['train', 'test'], help="Mode to run the script in: 'train' or 'test'")
     args = parser.parse_args()
     
@@ -111,4 +130,4 @@ if __name__ == '__main__':
 
     cfg.CONFIG_FILE_PATH = config_file_path
     cfg.merge_from_file(config_file_path)
-    main(cfg, args.mode)
+    main(cfg, args.mode, args.image_path)

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
@@ -122,6 +123,47 @@ def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=Non
             param_groups.append({'params': param, 'lr': base_lr})
     return param_groups
     pass  # ToDo
+
+def get_single_image_transform():
+    return transforms.Compose([
+        transforms.Resize((513, 513)),  # Resize the image
+        transforms.ToTensor(),  # Convert the image to a tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize the image
+    ])
+
+def predict_and_visualize(model, image_path, device):
+    """
+    Predict the segmentation mask for a single image and visualize the result.
+
+    Args:
+        model (nn.Module): The trained model.
+        image_path (str): Path to the input image.
+        device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
+        transform (torchvision.transforms): The transformations to apply to the input image.
+    """
+    model.eval()  # Set the model to evaluation mode
+
+    # Load and transform the input image
+    image = Image.open(image_path).convert("RGB")
+    transform = get_single_image_transform()
+    input_image = transform(image).unsqueeze(0).to(device)
+
+    # Forward pass to get the prediction
+    with torch.no_grad():
+        output = model(input_image)['out']
+    output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+
+    # Visualize the original image and the predicted mask
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    ax[0].imshow(image)
+    ax[0].set_title("Original Image")
+    ax[0].axis("off")
+
+    ax[1].imshow(output_predictions, cmap="gray")
+    ax[1].set_title("Predicted Segmentation Mask")
+    ax[1].axis("off")
+
+    plt.show()
 
 def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 500)):
     """

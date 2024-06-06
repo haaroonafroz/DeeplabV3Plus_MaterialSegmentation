@@ -16,8 +16,8 @@ def get_cfg_defaults():
     # Model settings
     _C.MODEL = CN()
     _C.MODEL.NUM_CLASSES = 21
-    _C.MODEL.NUM_BLOCKS = [3, 3, 9, 3]
-    _C.MODEL.HIDDEN_DIMS = [96, 192, 384, 768]
+    #_C.MODEL.NUM_BLOCKS = [3, 3, 9, 3]
+    #_C.MODEL.HIDDEN_DIMS = [96, 192, 384, 768]
 
     # Training settings
     _C.TRAIN = CN()
@@ -36,8 +36,8 @@ def get_cfg_defaults():
     # Miscellaneous settings
     _C.MISC = CN()
     _C.MISC.RUN_NAME = 'default_run'
-    _C.MISC.RESULTS_CSV = '../results'
-    _C.MISC.SAVE_MODEL_PATH = '../saved_models'
+    _C.MISC.RESULTS_CSV = './results'
+    _C.MISC.SAVE_MODEL_PATH = './saved_models'
     _C.MISC.PRETRAINED_WEIGHTS = ''
     _C.MISC.FROZEN_LAYERS = []
     _C.MISC.NO_CUDA = False

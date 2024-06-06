@@ -9,8 +9,8 @@ MISC:
   RUN_NAME: 'PASCALVOC_config1_run'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
-  PRETRAINED_WEIGHTS: ''
-  NO_CUDA: True
+  PRETRAINED_WEIGHTS: '' #'COCO_WITH_VOC_LABELS_V1'
+  NO_CUDA: False
 
 TRAIN:
   BASE_LR: 0.001

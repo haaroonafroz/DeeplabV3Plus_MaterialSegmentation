@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
+from sklearn.metrics import jaccard_score
+import numpy as np
 from dlcv.utils import cross_entropy_4d
 
 def train_one_epoch(model, data_loader, criterion, optimizer, device):
@@ -39,23 +41,13 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     return epoch_loss
 
 def evaluate_one_epoch(model, data_loader, device):
-    """
-    Tests a given model for one epoch using the provided data loader and criterion.
-
-    Args:
-        model (nn.Module): The model to be tested.
-        data_loader (DataLoader): The data loader providing the testing data.
-        criterion (nn.Module): The loss function to be used during testing.
-        device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
-
-    Returns:
-        float: The average loss per batch for the entire epoch.
-        float: The accuracy of the model on the test data.
-    """
+    
     model.eval()  # Set the model to evaluation mode
     epoch_loss = 0.0
     correct_predictions = 0
     total_predictions = 0
+    all_preds = []
+    all_labels = []
 
     # Iterate over the data loader
     with torch.no_grad():  # Disable gradient calculation during evaluation
@@ -65,24 +57,50 @@ def evaluate_one_epoch(model, data_loader, device):
             # If target has a channel dimension, squeeze it
             if targets.ndimension() == 4 and targets.size(1) == 1:
                 targets = targets.squeeze(1)
-
             # Ensure the target is of type Long
             targets = targets.long()
+            
             # Forward pass
             outputs = model(inputs)
             loss = cross_entropy_4d(outputs, targets)
         
             # Compute accuracy
             _, predicted = torch.max(outputs, 1)
+            predicted = predicted.view(-1)  #new line
+            targets = targets.view(-1)      #new line
+            
             correct_predictions += (predicted == targets).sum().item()
             total_predictions += targets.size(0)
+
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(targets.cpu().numpy())
 
             epoch_loss += loss.item() * inputs.size(0)  # Accumulate loss
 
     epoch_loss /= len(data_loader.dataset)  # Calculate average loss
     accuracy = correct_predictions / total_predictions  # Calculate accuracy
 
+    #compute IoU
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+
+    iou = calculate_mean_iou(all_preds, all_labels, num_classes=model.model.classifier[4].out_channels)
+
+
     return epoch_loss, accuracy
+
+def calculate_mean_iou(preds, labels, num_classes):
+    ious = []
+    for cls in range(num_classes):
+        pred_inds = preds == cls
+        target_inds = labels == cls
+        intersection = (pred_inds & target_inds).sum()
+        union = (pred_inds | target_inds).sum()
+        if union == 0:
+            ious.append(float('nan'))  # If there is no union, the IoU is undefined
+        else:
+            ious.append(intersection / union)
+    return np.nanmean(ious)
 
 def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimizer, num_epochs, device, scheduler=None, early_stopping=False):
     train_losses = []
