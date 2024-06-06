@@ -126,7 +126,7 @@ def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=Non
 
 def get_single_image_transform():
     return transforms.Compose([
-        transforms.Resize((513, 513)),  # Resize the image
+        transforms.Resize((375, 500)),  # Resize the image
         transforms.ToTensor(),  # Convert the image to a tensor
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize the image
     ])
@@ -143,14 +143,27 @@ def predict_and_visualize(model, image_path, device):
     """
     model.eval()  # Set the model to evaluation mode
 
+    try:
+        image = Image.open(image_path).convert("RGB")  # This will handle JPEG, PNG, etc.
+    except Exception as e:
+        print(f"Error opening image: {e}")
+        return
+
     # Load and transform the input image
     image = Image.open(image_path).convert("RGB")
     transform = get_single_image_transform()
     input_image = transform(image).unsqueeze(0).to(device)
 
+    print(f"Input image type: {type(input_image)}")
+    print(f"Input image shape: {input_image.shape}")
+
     # Forward pass to get the prediction
     with torch.no_grad():
-        output = model(input_image)['out']
+        output = model(input_image)
+        print(f"Model output type: {type(output)}")
+        print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
+
+        # `output` is a tensor of shape (batch_size, num_classes, H, W)
     output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
 
     # Visualize the original image and the predicted mask

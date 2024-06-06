@@ -36,9 +36,9 @@ def main(cfg, mode, image_path=None):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    if mode == 'single_image':
-        if image_path is None:
-            raise ValueError("Image path must be provided for single image mode")
+    if mode == 'single_image' and image_path:
+        # if image_path is None:
+        #     raise ValueError("Image path must be provided for single image mode")
         
         model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
         model.to(device)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train and Evaluate a model")
     parser.add_argument('--config', type=str, help="Path to the config file")
     parser.add_argument('--image_path', type=str, help="Path to the input image for 'single_image' mode")
-    parser.add_argument('--mode', type=str, required=True, choices=['train', 'test'], help="Mode to run the script in: 'train' or 'test'")
+    parser.add_argument('--mode', type=str, required=True, choices=['train', 'test', 'single_image'], help="Mode to run the script in: 'train' or 'test'")
     args = parser.parse_args()
     
     cfg = get_cfg_defaults()
