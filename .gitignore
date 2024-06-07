@@ -26,6 +26,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -164,4 +165,5 @@ cython_debug/
 data/
 *.csv
 dlcv24_2_env/
-Github-token*
+Github-token.txt
+.vs
