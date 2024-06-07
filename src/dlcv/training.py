@@ -44,8 +44,8 @@ def evaluate_one_epoch(model, data_loader, device):
     
     model.eval()  # Set the model to evaluation mode
     epoch_loss = 0.0
-    correct_predictions = 0
-    total_predictions = 0
+    #correct_predictions = 0
+    #total_predictions = 0
     all_preds = []
     all_labels = []
 
@@ -66,19 +66,13 @@ def evaluate_one_epoch(model, data_loader, device):
         
             # Compute accuracy
             _, predicted = torch.max(outputs, 1)
-            predicted = predicted.view(-1)  #new line
-            targets = targets.view(-1)      #new line
-            
-            correct_predictions += (predicted == targets).sum().item()
-            total_predictions += targets.size(0)
-
-            all_preds.extend(predicted.cpu().numpy())
-            all_labels.extend(targets.cpu().numpy())
+            all_preds.extend(predicted.cpu().numpy().flatten())
+            all_labels.extend(targets.cpu().numpy().flatten())
 
             epoch_loss += loss.item() * inputs.size(0)  # Accumulate loss
 
     epoch_loss /= len(data_loader.dataset)  # Calculate average loss
-    accuracy = correct_predictions / total_predictions  # Calculate accuracy
+    #accuracy = correct_predictions / total_predictions  # Calculate accuracy
 
     #compute IoU
     all_preds = np.array(all_preds)
@@ -87,7 +81,8 @@ def evaluate_one_epoch(model, data_loader, device):
     iou = calculate_mean_iou(all_preds, all_labels, num_classes=model.model.classifier[4].out_channels)
 
 
-    return epoch_loss, accuracy
+    return epoch_loss, iou
+
 
 def calculate_mean_iou(preds, labels, num_classes):
     ious = []
@@ -102,10 +97,12 @@ def calculate_mean_iou(preds, labels, num_classes):
             ious.append(intersection / union)
     return np.nanmean(ious)
 
+
+
 def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimizer, num_epochs, device, scheduler=None, early_stopping=False):
     train_losses = []
     test_losses = []
-    test_accuracies = []
+    test_ious = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
 
@@ -113,9 +110,9 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
         train_losses.append(train_loss)
 
-        test_loss, test_accuracy = evaluate_one_epoch(model, test_loader, criterion, device)
+        test_loss, test_iou = evaluate_one_epoch(model, test_loader, criterion, device)
         test_losses.append(test_loss)
-        test_accuracies.append(test_accuracy)
+        test_ious.append(test_iou)
 
         if scheduler is not None:
             scheduler.step()
@@ -131,7 +128,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
                 print("Early stopping triggered!")
                 break
 
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Test IoU: {test_iou:.4f}")
 
-    return train_losses, test_losses, test_accuracies
+    return train_losses, test_losses, test_ious
 
