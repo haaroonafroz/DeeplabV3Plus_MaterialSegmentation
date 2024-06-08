@@ -1,23 +1,23 @@
 DATA:
   DATASET: 'VOCSegmentation'
-  ROOT: '/kaggle/input/vocsegmentation-2012/VOCdevkit/VOC2012' # './data/VOCdevkit/VOC2012'
+  ROOT: './data'
 
 MODEL:
   NUM_CLASSES: 21
 
 MISC:
-  RUN_NAME: 'PASCALVOC_config1_run'
-  RESULTS_CSV: '/kaggle/working/repository_content/results'
-  SAVE_MODEL_PATH: '/kaggle/working/repository_content/saved_models'
-  PRETRAINED_WEIGHTS: ''
+  RUN_NAME: 'PASCALVOC_Epoch20'
+  RESULTS_CSV: './results'
+  SAVE_MODEL_PATH: './saved_models'
+  PRETRAINED_WEIGHTS: './saved_models/PASCALVOC_Epoch10.pth'
   NO_CUDA: False
 
 TRAIN:
-  BASE_LR: 0.001
+  BASE_LR: 0.0001
   MILESTONES: [10, 20]
   GAMMA: 0.1
-  BATCH_SIZE: 16
-  NUM_EPOCHS: 3
+  BATCH_SIZE: 8
+  NUM_EPOCHS: 10
   EARLY_STOPPING: False
 
 AUGMENTATION:

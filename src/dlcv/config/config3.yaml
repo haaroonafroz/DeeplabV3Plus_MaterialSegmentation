@@ -6,10 +6,10 @@ MODEL:
   NUM_CLASSES: 21
 
 MISC:
-  RUN_NAME: 'PASCALVOC_Epoch10'
+  RUN_NAME: 'PASCALVOC_Epoch30'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
-  PRETRAINED_WEIGHTS: ''
+  PRETRAINED_WEIGHTS: './saved_models/PASCALVOC_Epoch20.pth'
   NO_CUDA: False
 
 TRAIN:

@@ -70,7 +70,6 @@ def load_pretrained_weights(network, weights_path, device):
     network.load_state_dict(state_dict)
     
     return network
-    pass # ToDo
 
 
 def freeze_layers(network, frozen_layers):
