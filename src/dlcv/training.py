@@ -110,7 +110,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
         train_losses.append(train_loss)
 
-        test_loss, test_iou = evaluate_one_epoch(model, test_loader, criterion, device)
+        test_loss, test_iou = evaluate_one_epoch(model, test_loader, device)
         test_losses.append(test_loss)
         test_ious.append(test_iou)
 
