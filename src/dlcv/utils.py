@@ -225,7 +225,7 @@ def get_target_transform():
         transforms.ToTensor()
     ])
 
-def write_results_to_csv(file_path, train_losses, test_losses, test_accuracies):
+def write_results_to_csv(file_path, train_losses, test_losses, test_ious):
     """
     Writes the training and testing results to a CSV file.
 
@@ -237,9 +237,9 @@ def write_results_to_csv(file_path, train_losses, test_losses, test_accuracies):
     """
     with open(file_path + ".csv", mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Epoch', 'Train Loss', 'Test Loss', 'Test Accuracy'])
+        writer.writerow(['Epoch', 'Train Loss', 'Test Loss', 'Test IoU'])
         for epoch in range(len(train_losses)):
-            writer.writerow([epoch + 1, train_losses[epoch], test_losses[epoch], test_accuracies[epoch]])
+            writer.writerow([epoch + 1, train_losses[epoch], test_losses[epoch], test_ious[epoch]])
 
 def plot_multiple_losses_and_accuracies(model_data_list):
     """

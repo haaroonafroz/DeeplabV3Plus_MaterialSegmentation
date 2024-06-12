@@ -72,8 +72,6 @@ def evaluate_one_epoch(model, data_loader, device):
             epoch_loss += loss.item() * inputs.size(0)  # Accumulate loss
 
     epoch_loss /= len(data_loader.dataset)  # Calculate average loss
-    #accuracy = correct_predictions / total_predictions  # Calculate accuracy
-
     #compute IoU
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)

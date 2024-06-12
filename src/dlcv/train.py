@@ -95,7 +95,7 @@ def main(cfg, mode, image_path=None):
                 model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
                 early_stopping=cfg.TRAIN.EARLY_STOPPING)
             
-            print(f"Train Loss: {train_losses:.4f}, Test Loss: {test_losses:.4f}. Test IoU: {test_ious:.4f}")
+            print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU: {test_ious[-1]:.4f}")
             
             write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious)
 
