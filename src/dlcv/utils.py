@@ -48,33 +48,24 @@ def load_pretrained_weights(network, weights_path, device):
     Returns:
         network (nn.Module): The network with the pretrained weights loaded and adjusted if necessary.
     """
-    # Load the state_dict from the saved file
-    state_dict = torch.load(weights_path, map_location=device)
-
-    # Check for missong and mismatch in keys in pretrained weights
-    new_state_dict = {}
-    for k, v in state_dict.items():
-        # Example of renaming keys
-        if k.startswith("backbone."):
-            new_key = k.replace("backbone.", "low_level_layers.")
-        elif k.startswith("classifier."):
-            new_key = k.replace("classifier.", "high_level_layers.")
-        else:
-            new_key = k  # Keep the key as it is if no renaming needed
-        new_state_dict[new_key] = v
-
-    # Debugg missing and mismatch keys:
-    # Load the state dictionary into the model
-    missing_keys = set(network.state_dict().keys()) - set(new_state_dict.keys())
-    extra_keys = set(new_state_dict.keys()) - set(network.state_dict().keys())
-
-    if missing_keys:
-        print(f"Warning: Missing keys: {missing_keys}")
-    if extra_keys:
-        print(f"Warning: Extra keys: {extra_keys}")
+        # Load the checkpoint from the saved file
+    #print(network.state_dict().keys())
+    checkpoint = torch.load(weights_path, map_location=device)
+    print(f"Keys in checkpoint: {checkpoint.keys()}")
     
-    # Load the state_dict into the network
-    network.load_state_dict(new_state_dict, strict= False)
+    # Extract the model state_dict from the checkpoint
+    loaded_keys = []
+    if 'model_state' in checkpoint:
+        model_state = checkpoint['model_state']
+        for key in model_state:
+            if key in network.state_dict():
+                network.state_dict()[key].copy_(model_state[key])
+                loaded_keys.append(key)
+            # else:
+            #     print(f"Warning: Key '{key}' in model_state not found in network's state_dict.")
+
+    if loaded_keys:
+        print(f"Loaded keys: {loaded_keys}")
     
     return network
 

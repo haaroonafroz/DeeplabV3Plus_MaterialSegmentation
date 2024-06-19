@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
+from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier):
@@ -72,7 +73,8 @@ class ASPPPooling(nn.Sequential):
 class ResNetBackbone(nn.Module):
     def __init__(self, pretrained=True):
         super(ResNetBackbone, self).__init__()
-        resnet101 = models.resnet101(weights='IMAGENET1K_V2' if pretrained else None)
+        weights_VOC = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
+        resnet101 = models.resnet101(weights='IMAGENET1K_V2' if pretrained else None) #'IMAGENET1K_V2'
 
         self.low_level_layers = nn.Sequential(
             resnet101.conv1,
@@ -90,7 +92,7 @@ class ResNetBackbone(nn.Module):
     def forward(self, x):
         low_level_features = self.low_level_layers(x)
         high_level_features = self.high_level_layers(low_level_features)
-        return {'low_level': low_level_features, 'out': high_level_features}
+        return {'low_level': low_level_features, 'high_level': high_level_features}
 
 class DeepLabV3PlusHead(nn.Module):
     def __init__(self, num_classes, aspp_dilate=[12, 24, 36]):
@@ -101,6 +103,14 @@ class DeepLabV3PlusHead(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.aspp = ASPP(2048, aspp_dilate)
+
+        # Define the decoder module
+        self.decoder = nn.Sequential(
+            nn.Conv2d(48, 48, 1, bias=False),  # Adjust channels if needed
+            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
+        )
+
         self.classifier = nn.Sequential(
             nn.Conv2d(304, 256, 3, padding=1, bias=False),
             nn.BatchNorm2d(256),
@@ -111,9 +121,16 @@ class DeepLabV3PlusHead(nn.Module):
 
     def forward(self, features):
         low_level_features = self.project(features['low_level'])
-        high_level_features = self.aspp(features['out'])
-        high_level_features = F.interpolate(high_level_features, size=low_level_features.shape[2:], mode='bilinear', align_corners=False)
-        return self.classifier(torch.cat([low_level_features, high_level_features], dim=1))
+        high_level_features = self.aspp(features['high_level'])
+        high_level_features = F.interpolate(high_level_features, size=low_level_features.shape[-2:], mode='bilinear', align_corners=False)
+        # Use the decoder to upsample and refine low-level features
+        low_level_features = self.decoder(low_level_features)
+        # Concatenate low-level and high-level features
+        x = torch.cat([low_level_features, high_level_features], dim=1)
+        
+        # Final classification
+        x = self.classifier(x)
+        return x
     
     def _init_weight(self):
         for m in self.modules():
