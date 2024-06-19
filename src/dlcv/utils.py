@@ -21,7 +21,6 @@ def cross_entropy_4d(input, target):
     Returns:
         Tensor: Computed loss.
     """
-    #print(f"Input shape: {input.shape}, Target shape: {target.shape}")
 
     # If target has a channel dimension, squeeze it
     if target.ndimension() == 4 and target.size(1) == 1:
@@ -38,20 +37,6 @@ def cross_entropy_4d(input, target):
 
     return F.cross_entropy(input, target)
 
-class CustomLoss(nn.Module):
-    def __init__(self):
-        super(CustomLoss, self).__init__()
-
-    def forward(self, input, target):
-        # Ensure that both input and target have the same shape
-        assert input.shape == target.shape, "Input and target shapes must match"
-        
-        # Calculate the loss using your custom logic
-        # Here we provide a simple example of mean squared error (MSE) loss
-        loss = torch.mean((input - target)**2)
-        
-        return loss
-
 def load_pretrained_weights(network, weights_path, device):
     """
     Loads pretrained weights (state_dict) into the specified network.
@@ -65,9 +50,31 @@ def load_pretrained_weights(network, weights_path, device):
     """
     # Load the state_dict from the saved file
     state_dict = torch.load(weights_path, map_location=device)
+
+    # Check for missong and mismatch in keys in pretrained weights
+    new_state_dict = {}
+    for k, v in state_dict.items():
+        # Example of renaming keys
+        if k.startswith("backbone."):
+            new_key = k.replace("backbone.", "low_level_layers.")
+        elif k.startswith("classifier."):
+            new_key = k.replace("classifier.", "high_level_layers.")
+        else:
+            new_key = k  # Keep the key as it is if no renaming needed
+        new_state_dict[new_key] = v
+
+    # Debugg missing and mismatch keys:
+    # Load the state dictionary into the model
+    missing_keys = set(network.state_dict().keys()) - set(new_state_dict.keys())
+    extra_keys = set(new_state_dict.keys()) - set(network.state_dict().keys())
+
+    if missing_keys:
+        print(f"Warning: Missing keys: {missing_keys}")
+    if extra_keys:
+        print(f"Warning: Extra keys: {extra_keys}")
     
     # Load the state_dict into the network
-    network.load_state_dict(state_dict)
+    network.load_state_dict(new_state_dict, strict= False)
     
     return network
 
@@ -85,6 +92,7 @@ def freeze_layers(network, frozen_layers):
             param.requires_grad = False
     pass  # ToDo
 
+
 def save_model(model, path):
     """
     Saves the model state_dict to a specified file.
@@ -97,6 +105,7 @@ def save_model(model, path):
     model_state = model.to(torch.device('cpu')).state_dict()
     torch.save(model_state, path + ".pth")
     pass  # ToDo
+
 
 def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=None):
     """
@@ -121,14 +130,43 @@ def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=Non
         else:
             param_groups.append({'params': param, 'lr': base_lr})
     return param_groups
-    pass  # ToDo
 
-def get_single_image_transform():
-    return transforms.Compose([
-        transforms.Resize((375, 500)),  # Resize the image
-        transforms.ToTensor(),  # Convert the image to a tensor
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize the image
-    ])
+
+def voc_cmap(N=256, normalized=False):
+    def bitget(byteval, idx):
+        return ((byteval & (1 << idx)) != 0)
+
+    dtype = 'float32' if normalized else 'uint8'
+    cmap = np.zeros((N, 3), dtype=dtype)
+    for i in range(N):
+        r = g = b = 0
+        c = i
+        for j in range(8):
+            r = r | (bitget(c, 0) << 7-j)
+            g = g | (bitget(c, 1) << 7-j)
+            b = b | (bitget(c, 2) << 7-j)
+            c = c >> 3
+
+        cmap[i] = np.array([r, g, b])
+
+    cmap = cmap/255 if normalized else cmap
+    return cmap
+
+def decode_segmap(image, nc=21):
+    label_colors = voc_cmap(256)
+
+    r = np.zeros_like(image).astype(np.uint8)
+    g = np.zeros_like(image).astype(np.uint8)
+    b = np.zeros_like(image).astype(np.uint8)
+
+    for l in range(0, nc):
+        idx = image == l
+        r[idx] = label_colors[l, 0]
+        g[idx] = label_colors[l, 1]
+        b[idx] = label_colors[l, 2]
+
+    rgb = np.stack([r, g, b], axis=2)
+    return rgb
 
 def predict_and_visualize(model, image_path, device):
     """
@@ -165,15 +203,19 @@ def predict_and_visualize(model, image_path, device):
         # `output` is a tensor of shape (batch_size, num_classes, H, W)
     output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
 
+    # Decode the segmentation map to RGB
+    decoded_predictions = decode_segmap(output_predictions)
+
     # Visualize the original image and the predicted mask
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
     ax[0].imshow(image)
     ax[0].set_title("Original Image")
     ax[0].axis("off")
 
-    ax[1].imshow(output_predictions, cmap="gray")
+    ax[1].imshow(decoded_predictions)
     ax[1].set_title("Predicted Segmentation Mask")
     ax[1].axis("off")
+
 
     plt.show()
 
@@ -218,12 +260,20 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, r
     composed_transform = transforms.Compose(transform_list)
 
     return composed_transform
-    #pass  # ToDo
+
 def get_target_transform():
     return transforms.Compose([
         transforms.Resize((375, 500)),
         transforms.ToTensor()
     ])
+
+def get_single_image_transform():
+    return transforms.Compose([
+        transforms.Resize((375, 500)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
 
 def write_results_to_csv(file_path, train_losses, test_losses, test_ious):
     """
