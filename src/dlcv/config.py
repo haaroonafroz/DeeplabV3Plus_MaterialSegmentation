@@ -11,7 +11,7 @@ def get_cfg_defaults():
     # Data settings
     _C.DATA = CN()
     _C.DATA.DATASET = 'VOCSegmentation'
-    _C.DATA.ROOT = './data/VOCdevkit/VOC2012'
+    _C.DATA.ROOT = './data'
 
     # Model settings
     _C.MODEL = CN()
