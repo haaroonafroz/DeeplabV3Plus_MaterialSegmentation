@@ -17,6 +17,7 @@ from dlcv.config import get_cfg_defaults
 from dlcv.model import *
 from dlcv.utils import *
 from dlcv.training import *
+from dlcv.dataset import *
 
 def sum(a, b):
     x=a+b
@@ -34,7 +35,7 @@ def main(cfg, mode, image_path=None):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    model = DeepLabV3Plus(num_classes=cfg.MODEL.NUM_CLASSES)
+    model = DeepLabV3Plus(num_classes_object==cfg.MODEL.NUM_CLASSES_OBJECT, num_classes_material==cfg.MODEL.NUM_CLASSES_MATERIAL)
     model.to(device)
 
     if mode == 'single_image' and image_path:
@@ -47,8 +48,8 @@ def main(cfg, mode, image_path=None):
 
 
     else:
-        train_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='train', download=False, transform=train_transform, target_transform=target_transform)
-        test_dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=False, transform=test_transform, target_transform=target_transform)
+        train_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, train_transform=train_transform, target_transform=target_transform, mode='train')
+        test_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, test_transform=test_transform, target_transform=target_transform, mode='test')
 
         train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
         test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
@@ -60,13 +61,13 @@ def main(cfg, mode, image_path=None):
             optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-            train_losses, test_losses, test_ious = train_and_evaluate_model(
+            train_losses, test_losses, test_ious_object, test_ious_material = train_and_evaluate_model(
                 model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
                 early_stopping=cfg.TRAIN.EARLY_STOPPING)
             
-            print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU: {test_ious[-1]:.4f}")
+            print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU (Object): {test_ious_object[-1]:.4f}, Test IoU (Material): {test_ious_material[-1]:.4f}")
             
-            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious)
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious_object, test_ious_material)
 
             if cfg.MISC.SAVE_MODEL_PATH:
                 save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
@@ -76,10 +77,9 @@ def main(cfg, mode, image_path=None):
                 f.write(cfg.dump())
 
         elif mode == 'test':
-            test_loss, test_iou = evaluate_one_epoch(model, test_loader, device)
-            print(f"Test Loss: {test_loss:.4f}, Test IoU: {test_iou:.4f}")
-            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, test_loss, test_iou)
-
+            test_loss, test_iou_object, test_iou_material = evaluate_one_epoch(model, test_loader, device)
+            print(f"Test Loss: {test_loss:.4f}, Test IoU (Object): {test_iou_object:.4f}, Test IoU (Material): {test_iou_material:.4f}")
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, [test_loss], [test_iou_object], [test_iou_material])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train and Evaluate a model")

@@ -5,81 +5,85 @@ from sklearn.metrics import jaccard_score
 import numpy as np
 from dlcv.utils import cross_entropy_4d
 
+import torch
+import torch.nn.functional as F
+from tqdm import tqdm
+from sklearn.metrics import jaccard_score
+import numpy as np
+from dlcv.utils import cross_entropy_4d
+
 def train_one_epoch(model, data_loader, criterion, optimizer, device):
-    """
-    Trains a given model for one epoch using the provided data loader, criterion, and optimizer.
-
-    Args:
-        model (nn.Module): The model to be trained.
-        data_loader (DataLoader): The data loader providing the training data.
-        criterion (nn.Module): The loss function to be used during training.
-        optimizer (torch.optim.Optimizer): The optimizer to be used for updating the model's parameters.
-        device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
-
-    Returns:
-        float: The average loss per batch for the entire epoch.
-    """
-    model.train()  # Set the model to training mode
+    model.train()
     epoch_loss = 0.0
 
-    # Iterate over the data loader
-    for inputs, targets in tqdm(data_loader, desc="Training"):
-        inputs, targets = inputs.to(device), targets.to(device)  # Move data to the appropriate device
-        optimizer.zero_grad()  # Zero out gradients
+    for inputs, targets, class_targets in tqdm(data_loader, desc="Training"):
+        inputs, targets, class_targets = inputs.to(device), targets.to(device), class_targets.to(device)
+        optimizer.zero_grad()
 
-        # Forward pass
-        outputs = model(inputs)
-        loss = cross_entropy_4d(outputs, targets)
+        outputs_object, outputs_material = model(inputs)
         
-        # Backward pass
+        loss_object = cross_entropy_4d(outputs_object, targets)
+        loss_material = cross_entropy_4d(outputs_material, class_targets)
+        
+        loss = loss_object + loss_material
+        
         loss.backward()
-        optimizer.step()  # Update model parameters
+        optimizer.step()
         
-        epoch_loss += loss.item() * inputs.size(0)  # Accumulate loss
+        epoch_loss += loss.item() * inputs.size(0)
 
-    epoch_loss /= len(data_loader.dataset)  # Calculate average loss
+    epoch_loss /= len(data_loader.dataset)
     return epoch_loss
 
-def evaluate_one_epoch(model, data_loader, device):
-    
-    model.eval()  # Set the model to evaluation mode
-    epoch_loss = 0.0
-    #correct_predictions = 0
-    #total_predictions = 0
-    all_preds = []
-    all_labels = []
 
-    # Iterate over the data loader
-    with torch.no_grad():  # Disable gradient calculation during evaluation
-        for inputs, targets in tqdm(data_loader, desc="Evaluation"):
-            inputs, targets = inputs.to(device), targets.to(device)  # Move data to the appropriate device
-            
-            # If target has a channel dimension, squeeze it
+def evaluate_one_epoch(model, data_loader, device):
+    model.eval()
+    epoch_loss = 0.0
+    all_preds_object = []
+    all_labels_object = []
+    all_preds_material = []
+    all_labels_material = []
+
+    with torch.no_grad():
+        for inputs, targets, class_targets in tqdm(data_loader, desc="Evaluation"):
+            inputs, targets, class_targets = inputs.to(device), targets.to(device), class_targets.to(device)
+
             if targets.ndimension() == 4 and targets.size(1) == 1:
                 targets = targets.squeeze(1)
-            # Ensure the target is of type Long
+            if class_targets.ndimension() == 4 and class_targets.size(1) == 1:
+                class_targets = class_targets.squeeze(1)
+                
             targets = targets.long()
+            class_targets = class_targets.long()
             
-            # Forward pass
-            outputs = model(inputs)
-            loss = cross_entropy_4d(outputs, targets)
-        
-            # Compute accuracy
-            _, predicted = torch.max(outputs, 1)
-            all_preds.extend(predicted.cpu().numpy().flatten())
-            all_labels.extend(targets.cpu().numpy().flatten())
+            outputs_object, outputs_material = model(inputs)
+            
+            loss_object = cross_entropy_4d(outputs_object, targets)
+            loss_material = cross_entropy_4d(outputs_material, class_targets)
+            
+            loss = loss_object + loss_material
 
-            epoch_loss += loss.item() * inputs.size(0)  # Accumulate loss
+            _, predicted_object = torch.max(outputs_object, 1)
+            _, predicted_material = torch.max(outputs_material, 1)
+            
+            all_preds_object.extend(predicted_object.cpu().numpy().flatten())
+            all_labels_object.extend(targets.cpu().numpy().flatten())
+            all_preds_material.extend(predicted_material.cpu().numpy().flatten())
+            all_labels_material.extend(class_targets.cpu().numpy().flatten())
+            
+            epoch_loss += loss.item() * inputs.size(0)
 
-    epoch_loss /= len(data_loader.dataset)  # Calculate average loss
-    #compute IoU
-    all_preds = np.array(all_preds)
-    all_labels = np.array(all_labels)
+    epoch_loss /= len(data_loader.dataset)
+    
+    all_preds_object = np.array(all_preds_object)
+    all_labels_object = np.array(all_labels_object)
+    all_preds_material = np.array(all_preds_material)
+    all_labels_material = np.array(all_labels_material)
 
-    iou = calculate_mean_iou(all_preds, all_labels, num_classes=model.model.classifier[4].out_channels)
+    iou_object = calculate_mean_iou(all_preds_object, all_labels_object, num_classes=model.classifier_object.classifier[4].out_channels)
+    iou_material = calculate_mean_iou(all_preds_material, all_labels_material, num_classes=model.classifier_material.classifier[4].out_channels)
 
-
-    return epoch_loss, iou
+    return epoch_loss, iou_object, iou_material
 
 
 def calculate_mean_iou(preds, labels, num_classes):
@@ -100,7 +104,8 @@ def calculate_mean_iou(preds, labels, num_classes):
 def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimizer, num_epochs, device, scheduler=None, early_stopping=False):
     train_losses = []
     test_losses = []
-    test_ious = []
+    test_ious_object = []
+    test_ious_material = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
 
@@ -108,9 +113,10 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
         train_losses.append(train_loss)
 
-        test_loss, test_iou = evaluate_one_epoch(model, test_loader, device)
+        test_loss, test_iou_object, test_iou_material = evaluate_one_epoch(model, test_loader, device)
         test_losses.append(test_loss)
-        test_ious.append(test_iou)
+        test_ious_object.append(test_iou_object)
+        test_ious_material.append(test_iou_material)
 
         if scheduler is not None:
             scheduler.step()
@@ -126,7 +132,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
                 print("Early stopping triggered!")
                 break
 
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Test IoU: {test_iou:.4f}")
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Test IoU (Object): {test_iou_object:.4f}, Test IoU (Material): {test_iou_material:.4f}")
 
-    return train_losses, test_losses, test_ious
+    return train_losses, test_losses, test_ious_object, test_ious_material
 

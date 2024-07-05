@@ -11,11 +11,13 @@ def get_cfg_defaults():
     # Data settings
     _C.DATA = CN()
     _C.DATA.DATASET = 'VOCSegmentation'
-    _C.DATA.ROOT = './data'
+    _C.DATA.VOC_ROOT = './data'
+    _C.DATA.MATERIAL_ROOT = './data/material_dataset'
 
     # Model settings
     _C.MODEL = CN()
-    _C.MODEL.NUM_CLASSES = 21
+    _C.MODEL.NUM_CLASSES_OBJECT = 21
+    _C.MODEL.NUM_CLASSES_MATERIAL = 4
     #_C.MODEL.NUM_BLOCKS = [3, 3, 9, 3]
     #_C.MODEL.HIDDEN_DIMS = [96, 192, 384, 768]
 
@@ -24,7 +26,7 @@ def get_cfg_defaults():
     _C.TRAIN.BASE_LR = 0.001
     _C.TRAIN.MILESTONES = [10, 20]
     _C.TRAIN.GAMMA = 0.1
-    _C.TRAIN.BATCH_SIZE = 64
+    _C.TRAIN.BATCH_SIZE = 8
     _C.TRAIN.NUM_EPOCHS = 50
     _C.TRAIN.EARLY_STOPPING = False
 

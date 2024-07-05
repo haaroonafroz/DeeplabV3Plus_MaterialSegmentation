@@ -5,17 +5,20 @@ import torchvision.models as models
 from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
 class _SimpleSegmentationModel(nn.Module):
-    def __init__(self, backbone, classifier):
+    def __init__(self, backbone, classifier_object, classifier_material):
         super(_SimpleSegmentationModel, self).__init__()
         self.backbone = backbone
-        self.classifier = classifier
+        self.classifier_object = classifier_object
+        self.classifier_material = classifier_material
         
     def forward(self, x):
         input_shape = x.shape[-2:]
         features = self.backbone(x)
-        x = self.classifier(features)
-        x = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-        return x
+        x_object = self.classifier_object(features)
+        x_material = self.classifier_material(features)
+        x_object = F.interpolate(x_object, size=input_shape, mode='bilinear', align_corners=False)
+        x_material = F.interpolate(x_material, size=input_shape, mode='bilinear', align_corners=False)
+        return x_object, x_material
 
 class ASPP(nn.Module):
     def __init__(self, in_channels, atrous_rates):
@@ -73,7 +76,7 @@ class ASPPPooling(nn.Sequential):
 class ResNetBackbone(nn.Module):
     def __init__(self, pretrained=True):
         super(ResNetBackbone, self).__init__()
-        weights_VOC = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
+        #weights_VOC = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
         resnet101 = models.resnet101(weights='IMAGENET1K_V2' if pretrained else None) #'IMAGENET1K_V2'
 
         self.low_level_layers = nn.Sequential(
@@ -141,15 +144,17 @@ class DeepLabV3PlusHead(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 class DeepLabV3Plus(_SimpleSegmentationModel):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes_object, num_classes_material):
         backbone = ResNetBackbone(pretrained=True)
-        classifier = DeepLabV3PlusHead(num_classes)
-        super(DeepLabV3Plus, self).__init__(backbone, classifier)
+        classifier_object = DeepLabV3PlusHead(num_classes_object)
+        classifier_material = DeepLabV3PlusHead(num_classes_material)
+        super(DeepLabV3Plus, self).__init__(backbone, classifier_object, classifier_material)
 
-def get_model(num_classes):
-    return DeepLabV3Plus(num_classes)
+def get_model(num_classes_object, num_classes_material):
+    return DeepLabV3Plus(num_classes_object, num_classes_material)
 
 if __name__ == "__main__":
-    num_classes = 21  # Example number of classes for PASCAL VOC 2012
-    model = get_model(num_classes)
+    num_classes_object = 21  # Example number of classes for PASCAL VOC 2012
+    num_classes_material = 4  # Example number of material classes (set as needed)
+    model = get_model(num_classes_object, num_classes_material)
     print(model)

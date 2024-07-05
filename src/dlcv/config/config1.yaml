@@ -1,12 +1,14 @@
 DATA:
   DATASET: 'VOCSegmentation'
-  ROOT: './data'
+  VOC_ROOT: './data'
+  MATERIAL_ROOT: './data/material_dataset'
 
 MODEL:
-  NUM_CLASSES: 21
+  NUM_CLASSES_OBJECT: 21
+  NUM_CLASSES_MATERIAL: 4
 
 MISC:
-  RUN_NAME: 'PASCALVOC_Epoch5-1'
+  RUN_NAME: 'DeeplabV3Plus_TestRun'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
   PRETRAINED_WEIGHTS: '' #'./saved_models/best_deeplabv3plus_resnet101_voc_os16.pth' # './saved_models/PASCALVOC_Epoch5-1.pth'

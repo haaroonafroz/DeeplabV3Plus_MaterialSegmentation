@@ -3,12 +3,12 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "HTCV_DeeplabV3_v1"
+name = "HTCV_DeeplabV3Plus_MaterialSegmentation"
 version = "0.0.1"
 authors = [
   { name="Haaroon Afroz", email="haaroon.afroz.ognawala@uni-weimar.de" },
 ]
-description = "First attempt at using DeeplabV3 CNN architecture for semantic material segmentation"
+description = "Second attempt at using DeeplabV3 with extension (DeeplabV3Plus) CNN architecture for semantic material segmentation"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -17,5 +17,5 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn", "pyyaml", "yacs"
+    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn", "pyyaml", "yacs", "numpy<2.0.0"
 ]
