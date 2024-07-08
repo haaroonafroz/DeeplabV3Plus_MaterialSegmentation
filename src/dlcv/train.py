@@ -35,7 +35,7 @@ def main(cfg, mode, image_path=None):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    model = DeepLabV3Plus(num_classes_object==cfg.MODEL.NUM_CLASSES_OBJECT, num_classes_material==cfg.MODEL.NUM_CLASSES_MATERIAL)
+    model = DeepLabV3Plus(num_classes_object=cfg.MODEL.NUM_CLASSES_OBJECT, num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL)
     model.to(device)
 
     if mode == 'single_image' and image_path:

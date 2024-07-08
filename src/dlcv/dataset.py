@@ -17,7 +17,7 @@ class CustomSegmentationDataset(Dataset):
 
         # Load VOC dataset
         image_set = 'train' if mode == 'train' else 'val'
-        self.voc_dataset = VOCSegmentation(root=voc_root, year='2012', image_set=image_set, download=True)
+        self.voc_dataset = VOCSegmentation(root=voc_root, year='2012', image_set=image_set, download=False)
 
         # Load Material dataset annotations
         with open(os.path.join(material_root, 'annotations.json'), 'r') as f:
@@ -25,8 +25,8 @@ class CustomSegmentationDataset(Dataset):
 
         # Load Material dataset images and masks
         material_image_dir = os.path.join(material_root, 'JPEGImages')
-        material_binary_mask_dir = os.path.join(material_root, 'BinaryMasks')
-        material_class_mask_dir = os.path.join(material_root, 'ClassMasks')
+        material_binary_mask_dir = os.path.join(material_root, 'Binary_Masks')
+        material_class_mask_dir = os.path.join(material_root, 'Class_Masks')
 
         self.material_images = [os.path.join(material_image_dir, ann['image']) for ann in self.material_annotations]
         self.material_binary_masks = [os.path.join(material_binary_mask_dir, ann['binary_mask']) for ann in self.material_annotations]
@@ -66,13 +66,13 @@ transform = transforms.Compose([
 ])
 
 # Create dataset and dataloader
-voc_root = './data/VOCdevkit/VOC2012'
-material_root = './data/material_dataset'
-dataset = CustomSegmentationDataset(voc_root, material_root, transform=transform)
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=4)
+# voc_root = './data/VOCdevkit/VOC2012'
+# material_root = './data/material_dataset'
+# dataset = CustomSegmentationDataset(voc_root, material_root, transform=transform)
+# dataloader = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=4)
 
-# For evaluation, you can create a similar dataset but with the 'val' split for VOCSegmentation
-eval_voc_root = './data/VOCdevkit/VOC2012'
-eval_material_root = './data/material_dataset'
-eval_dataset = CustomSegmentationDataset(eval_voc_root, eval_material_root, transform=transform)
-eval_dataloader = DataLoader(eval_dataset, batch_size=8, shuffle=False, num_workers=4)
+# # For evaluation, you can create a similar dataset but with the 'val' split for VOCSegmentation
+# eval_voc_root = './data/VOCdevkit/VOC2012'
+# eval_material_root = './data/material_dataset'
+# eval_dataset = CustomSegmentationDataset(eval_voc_root, eval_material_root, transform=transform)
+# eval_dataloader = DataLoader(eval_dataset, batch_size=8, shuffle=False, num_workers=4)
