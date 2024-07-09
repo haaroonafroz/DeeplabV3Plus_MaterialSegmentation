@@ -31,6 +31,8 @@ def main(cfg, mode, image_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() and not cfg.MISC.NO_CUDA else "cpu")
     print(f"Device: {device}")
 
+    # torch.backends.cudnn.benchmark = False  # Disable cuDNN benchmarking
+
     train_transform = get_transforms(train=True, horizontal_flip_prob=cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB, rotation_degrees=cfg.AUGMENTATION.ROTATION_DEGREES)
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
