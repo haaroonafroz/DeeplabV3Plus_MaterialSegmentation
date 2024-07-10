@@ -1,3 +1,4 @@
+import gc
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -36,7 +37,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     return epoch_loss
 
 
-def evaluate_one_epoch(model, data_loader, device):
+def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=30):
     model.eval()
     epoch_loss = 0.0
     all_preds_object = []
@@ -45,7 +46,7 @@ def evaluate_one_epoch(model, data_loader, device):
     all_labels_material = []
 
     with torch.no_grad():
-        for inputs, targets, class_targets in tqdm(data_loader, desc="Evaluation"):
+        for batch_idx, (inputs, targets, class_targets) in enumerate(tqdm(data_loader, desc="Evaluation")):
             inputs, targets, class_targets = inputs.to(device), targets.to(device), class_targets.to(device)
 
             if targets.ndimension() == 4 and targets.size(1) == 1:
@@ -72,6 +73,18 @@ def evaluate_one_epoch(model, data_loader, device):
             all_labels_material.extend(class_targets.cpu().numpy().flatten())
             
             epoch_loss += loss.item() * inputs.size(0)
+
+            # Periodic memory cleanup
+            if (batch_idx + 1) % memory_cleanup_frequency == 0:
+                del inputs, targets, class_targets, outputs_object, outputs_material, predicted_object, predicted_material
+                gc.collect()
+                torch.cuda.empty_cache()
+
+
+    # Final memory cleanup
+    del inputs, targets, class_targets, outputs_object, outputs_material, predicted_object, predicted_material
+    gc.collect()
+    torch.cuda.empty_cache()
 
     epoch_loss /= len(data_loader.dataset)
     

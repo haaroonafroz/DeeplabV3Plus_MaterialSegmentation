@@ -17,14 +17,15 @@ def read_csv_data(filepath):
     Returns:
         tuple: Returns train_losses, test_losses, test_accuracies lists.
     """
-    train_losses, test_losses, test_accuracies = [], [], []
+    train_losses, test_losses, test_ious_object, test_ious_material = [], [], [], []
     with open(filepath, mode='r') as file:
         csv_reader = csv.DictReader(file)
         for row in csv_reader:
             train_losses.append(float(row['Train Loss']))
             test_losses.append(float(row['Test Loss']))
-            test_accuracies.append(float(row['Test Accuracy']))
-    return train_losses, test_losses, test_accuracies
+            test_ious_object.append(float(row['Test IoU: Object']))
+            test_ious_material.append(float(row['Test IoU: Material']))
+    return train_losses, test_losses, test_ious_object, test_ious_material
 
 
 def main(args):
@@ -41,12 +42,13 @@ def main(args):
     for filename in os.listdir(args.folder):
         if filename.endswith(".csv") and not any(excl in filename for excl in exclusion_patterns):
             full_path = os.path.join(args.folder, filename)
-            train_losses, test_losses, test_accuracies = read_csv_data(full_path)
+            train_losses, test_losses, test_ious_object, test_ious_material = read_csv_data(full_path)
             model_data = {
                 'name': filename.replace('.csv', ''),
                 'train_losses': train_losses,
                 'test_losses': test_losses,
-                'test_accuracies': test_accuracies
+                'test_ious_object': test_ious_object,
+                'test_ious_material': test_ious_material
             }
             model_data_list.append(model_data)
 
@@ -55,7 +57,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Plot training and testing results from CSV files.')
-    parser.add_argument('--folder', type=str, default="../results", help='Folder containing the CSV files.')
+    parser.add_argument('--folder', type=str, default="./results", help='Folder containing the CSV files.')
     parser.add_argument('--exclude', type=str,
                         help='Comma-separated string patterns to exclude files from being plotted.')
     args = parser.parse_args()

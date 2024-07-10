@@ -53,8 +53,8 @@ def main(cfg, mode, image_path=None):
         train_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, train_transform=train_transform, target_transform=target_transform, mode='train')
         test_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, test_transform=test_transform, target_transform=target_transform, mode='test')
 
-        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
-        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
+        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=1)
+        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=1)
 
         if cfg.MISC.PRETRAINED_WEIGHTS:
             model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
