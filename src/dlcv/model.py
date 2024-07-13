@@ -3,6 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
+from pretrainedmodels.models import xception
+
+import ssl
+import certifi
+
+# ssl._create_default_https_context = ssl.create_default_context(cafile=certifi.where())
+ssl._create_default_https_context = ssl._create_unverified_context
 
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier_object, classifier_material):
@@ -73,27 +80,47 @@ class ASPPPooling(nn.Sequential):
         x = super(ASPPPooling, self).forward(x)
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
-class ResNetBackbone(nn.Module):
+class XceptionBackbone(nn.Module):
     def __init__(self, pretrained=True):
-        super(ResNetBackbone, self).__init__()
-        #weights_VOC = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
-        resnet101 = models.resnet101(weights='IMAGENET1K_V2' if pretrained else None) #'IMAGENET1K_V2'
+        super(XceptionBackbone, self).__init__()
+        xception_model = xception(pretrained='imagenet' if pretrained else None)
 
+        # Extract the necessary layers from the Xception model
         self.low_level_layers = nn.Sequential(
-            resnet101.conv1,
-            resnet101.bn1,
-            resnet101.relu,
-            resnet101.maxpool,
-            resnet101.layer1  # Low-level features
+            xception_model.conv1,
+            xception_model.bn1,
+            xception_model.relu,
+            xception_model.conv2,
+            xception_model.bn2,
+            xception_model.relu,
+            xception_model.block1,
+            xception_model.block2,
+            xception_model.block3,
         )
+
+        self.project_low_level = nn.Conv2d(256, 48 , kernel_size=1, stride=1, padding=0, bias=False)
+
         self.high_level_layers = nn.Sequential(
-            resnet101.layer2,
-            resnet101.layer3,
-            resnet101.layer4  # High-level features
+            xception_model.block4,
+            xception_model.block5,
+            xception_model.block6,
+            xception_model.block7,
+            xception_model.block8,
+            xception_model.block9,
+            xception_model.block10,
+            xception_model.block11,
+            xception_model.block12,
+            xception_model.conv3,
+            xception_model.bn3,
+            xception_model.relu,
+            xception_model.conv4,
+            xception_model.bn4,
+            xception_model.relu,
         )
 
     def forward(self, x):
         low_level_features = self.low_level_layers(x)
+        low_level_features = self.project_low_level(low_level_features)
         high_level_features = self.high_level_layers(low_level_features)
         return {'low_level': low_level_features, 'high_level': high_level_features}
 
@@ -107,15 +134,14 @@ class DeepLabV3PlusHead(nn.Module):
         )
         self.aspp = ASPP(2048, aspp_dilate)
 
-        # Define the decoder module
         self.decoder = nn.Sequential(
-            nn.Conv2d(48, 48, 1, bias=False),  # Adjust channels if needed
+            nn.Conv2d(48, 48, 1, bias=False),
             nn.BatchNorm2d(48),
             nn.ReLU(inplace=True),
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(304, 256, 3, padding=1, bias=False),
+            nn.Conv2d(48 + 256, 256, 3, padding=1, bias=False),  # Adjust channels if needed
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, num_classes, 1)
@@ -126,12 +152,8 @@ class DeepLabV3PlusHead(nn.Module):
         low_level_features = self.project(features['low_level'])
         high_level_features = self.aspp(features['high_level'])
         high_level_features = F.interpolate(high_level_features, size=low_level_features.shape[-2:], mode='bilinear', align_corners=False)
-        # Use the decoder to upsample and refine low-level features
         low_level_features = self.decoder(low_level_features)
-        # Concatenate low-level and high-level features
         x = torch.cat([low_level_features, high_level_features], dim=1)
-        
-        # Final classification
         x = self.classifier(x)
         return x
     
@@ -145,7 +167,7 @@ class DeepLabV3PlusHead(nn.Module):
 
 class DeepLabV3Plus(_SimpleSegmentationModel):
     def __init__(self, num_classes_object, num_classes_material):
-        backbone = ResNetBackbone(pretrained=True)
+        backbone = XceptionBackbone(pretrained=True)
         classifier_object = DeepLabV3PlusHead(num_classes_object)
         classifier_material = DeepLabV3PlusHead(num_classes_material)
         super(DeepLabV3Plus, self).__init__(backbone, classifier_object, classifier_material)

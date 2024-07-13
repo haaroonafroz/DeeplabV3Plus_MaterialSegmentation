@@ -17,5 +17,5 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn", "pyyaml", "yacs", "numpy<2.0.0"
+    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "torchaudio", "scikit-learn", "seaborn", "pyyaml", "yacs", "numpy<2.0.0", "pretrainedmodels"
 ]
