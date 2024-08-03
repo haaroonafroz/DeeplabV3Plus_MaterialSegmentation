@@ -37,7 +37,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     return epoch_loss
 
 
-def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=30):
+def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=20):
     model.eval()
     epoch_loss = 0.0
     all_preds_object = []
