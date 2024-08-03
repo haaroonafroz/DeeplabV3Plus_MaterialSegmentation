@@ -17,5 +17,15 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pytest", "torch", "tqdm", "matplotlib", "torchvision", "scikit-learn", "seaborn", "pyyaml", "yacs", "numpy<2.0.0"
+    "pytest",
+    "torch==2.3.0+cu118",          # PyTorch version compatible with CUDA 11.8
+    "torchvision==0.18.0+cu118",   # torchvision version compatible with CUDA 11.8
+    "torchaudio==2.3.0+cu118",     # torchaudio version compatible with CUDA 11.8
+    "tqdm",
+    "matplotlib",
+    "scikit-learn",
+    "seaborn",
+    "pyyaml",
+    "yacs",
+    "numpy<2.0.0"
 ]
