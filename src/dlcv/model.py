@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
-from pretrainedmodels.models import xception
 
 import ssl
 import certifi
@@ -80,43 +79,15 @@ class ASPPPooling(nn.Sequential):
         x = super(ASPPPooling, self).forward(x)
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
-class XceptionBackbone(nn.Module):
+class MobileNetV2Backbone(nn.Module):
     def __init__(self, pretrained=True):
-        super(XceptionBackbone, self).__init__()
-        xception_model = xception(pretrained='imagenet' if pretrained else None)
+        super(MobileNetV2Backbone, self).__init__()
+        mobilenet = models.mobilenet_v2(pretrained=pretrained)
+        
+        self.low_level_layers = mobilenet.features[:4]  # Up to layer 4 (inclusive)
+        self.high_level_layers = mobilenet.features[4:]  # From layer 5 to the end
 
-        # Extract the necessary layers from the Xception model
-        self.low_level_layers = nn.Sequential(
-            xception_model.conv1,
-            xception_model.bn1,
-            xception_model.relu,
-            xception_model.conv2,
-            xception_model.bn2,
-            xception_model.relu,
-            xception_model.block1,
-            xception_model.block2,
-            xception_model.block3,
-        )
-
-        self.project_low_level = nn.Conv2d(256, 48 , kernel_size=1, stride=1, padding=0, bias=False)
-
-        self.high_level_layers = nn.Sequential(
-            xception_model.block4,
-            xception_model.block5,
-            xception_model.block6,
-            xception_model.block7,
-            xception_model.block8,
-            xception_model.block9,
-            xception_model.block10,
-            xception_model.block11,
-            xception_model.block12,
-            xception_model.conv3,
-            xception_model.bn3,
-            xception_model.relu,
-            xception_model.conv4,
-            xception_model.bn4,
-            xception_model.relu,
-        )
+        self.project_low_level = nn.Conv2d(24, 24, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, x):
         low_level_features = self.low_level_layers(x)
@@ -128,11 +99,11 @@ class DeepLabV3PlusHead(nn.Module):
     def __init__(self, num_classes, aspp_dilate=[12, 24, 36]):
         super(DeepLabV3PlusHead, self).__init__()
         self.project = nn.Sequential(
-            nn.Conv2d(256, 48, 1, bias=False),
+            nn.Conv2d(24, 48, 1, bias=False),  # Projecting low-level features to 48 channels
             nn.BatchNorm2d(48),
             nn.ReLU(inplace=True),
         )
-        self.aspp = ASPP(2048, aspp_dilate)
+        self.aspp = ASPP(1280, aspp_dilate)  # ASPP expects 1280 channels from MobileNetV2
 
         self.decoder = nn.Sequential(
             nn.Conv2d(48, 48, 1, bias=False),
@@ -141,7 +112,7 @@ class DeepLabV3PlusHead(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(48 + 256, 256, 3, padding=1, bias=False),  # Adjust channels if needed
+            nn.Conv2d(48 + 256, 256, 3, padding=1, bias=False),  # Adjust channels to match input
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, num_classes, 1)
@@ -167,7 +138,7 @@ class DeepLabV3PlusHead(nn.Module):
 
 class DeepLabV3Plus(_SimpleSegmentationModel):
     def __init__(self, num_classes_object, num_classes_material):
-        backbone = XceptionBackbone(pretrained=True)
+        backbone = MobileNetV2Backbone(pretrained=True)
         classifier_object = DeepLabV3PlusHead(num_classes_object)
         classifier_material = DeepLabV3PlusHead(num_classes_material)
         super(DeepLabV3Plus, self).__init__(backbone, classifier_object, classifier_material)
