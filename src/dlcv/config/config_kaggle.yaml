@@ -1,6 +1,6 @@
 DATA:
   DATASET: 'VOCSegmentation'
-  VOC_ROOT: '/kaggle/input/vocsegmentation-2012'
+  VOC_ROOT: '/kaggle/input/pascal-voc-2012'
   MATERIAL_ROOT: '/kaggle/input/material-dataset/material_dataset'
 
 MODEL:
