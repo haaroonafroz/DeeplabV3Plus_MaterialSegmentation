@@ -17,7 +17,7 @@ class CustomSegmentationDataset(Dataset):
 
         # Load VOC dataset
         image_set = 'train' if mode == 'train' else 'val'
-        self.voc_dataset = VOCSegmentation(root=voc_root, year='2012', image_set=image_set, download=False)
+        self.voc_dataset = VOCSegmentation(root=voc_root, year='2012', image_set=image_set, download=True)
 
         # Load Material dataset annotations
         with open(os.path.join(material_root, 'annotations.json'), 'r') as f:
