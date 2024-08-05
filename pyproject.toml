@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "HTCV_DeeplabV3Plus_MaterialSegmentation"
+version = "0.0.1"
+authors = [
+  { name="Haaroon Afroz", email="haaroon.afroz.ognawala@uni-weimar.de" },
+]
+description = "Second attempt at using DeeplabV3 with extension (DeeplabV3Plus) CNN architecture for semantic material segmentation"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pytest",
+    "torch==2.3.0+cu118",          # PyTorch version compatible with CUDA 11.8
+    "torchvision==0.18.0+cu118",   # torchvision version compatible with CUDA 11.8
+    "torchaudio==2.3.0+cu118",     # torchaudio version compatible with CUDA 11.8
+    "tqdm",
+    "matplotlib",
+    "scikit-learn",
+    "seaborn",
+    "pyyaml",
+    "yacs",
+    "numpy<2.0.0"
+]

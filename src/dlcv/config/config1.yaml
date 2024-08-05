@@ -1,0 +1,27 @@
+DATA:
+  DATASET: 'VOCSegmentation'
+  VOC_ROOT: './data'
+  MATERIAL_ROOT: './data/material_dataset'
+
+MODEL:
+  NUM_CLASSES_OBJECT: 21
+  NUM_CLASSES_MATERIAL: 4
+
+MISC:
+  RUN_NAME: 'DeeplabV3Plus_TestRun'
+  RESULTS_CSV: './results'
+  SAVE_MODEL_PATH: './saved_models'
+  PRETRAINED_WEIGHTS: '' #'./saved_models/best_deeplabv3plus_resnet101_voc_os16.pth' # './saved_models/PASCALVOC_Epoch5-1.pth'
+  NO_CUDA: False
+
+TRAIN:
+  BASE_LR: 0.0001
+  MILESTONES: [10, 20]
+  GAMMA: 0.1
+  BATCH_SIZE: 4
+  NUM_EPOCHS: 1
+  EARLY_STOPPING: False
+
+AUGMENTATION:
+  HORIZONTAL_FLIP_PROB: 0.5
+  ROTATION_DEGREES: 10
