@@ -1,9 +1,7 @@
 import argparse
 import yaml
 import torch
-import torch_xla.core.xla_model as xm
 from torch.utils.data import DataLoader
-from torch_xla.distributed.parallel_loader import MpDeviceLoader
 import sys
 import os
 from yacs.config import CfgNode as CN
@@ -49,8 +47,8 @@ def main(cfg, mode, image_path=None):
     model.to(device)
 
     if mode == 'single_image' and image_path:
-        # if image_path is None:
-        #     raise ValueError("Image path must be provided for single image mode")
+        if image_path is None:
+            raise ValueError("Image path must be provided for single image mode")
         if cfg.MISC.PRETRAINED_WEIGHTS:
             model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
@@ -61,12 +59,8 @@ def main(cfg, mode, image_path=None):
         train_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, train_transform=train_transform, target_transform=target_transform, mode='train')
         test_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, test_transform=test_transform, target_transform=target_transform, mode='test')
 
-        if 'COLAB_TPU_ADDR' in os.environ:  # Use TPU
-            train_loader = MpDeviceLoader(DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=1), device)
-            test_loader = MpDeviceLoader(DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=1), device)
-        else:  # Use CPU or GPU
-            train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=1)
-            test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=1)
+        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=1)
+        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=1)
 
         if cfg.MISC.PRETRAINED_WEIGHTS:
             model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)

@@ -6,7 +6,6 @@ import os
 from sklearn.metrics import jaccard_score
 import numpy as np
 from dlcv.utils import cross_entropy_4d
-import torch_xla.core.xla_model as xm
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -30,10 +29,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
         loss = loss_object + loss_material
         
         loss.backward()
-        if 'COLAB_TPU_ADDR' in os.environ:
-            xm.optimizer_step(optimizer)
-        else:
-            optimizer.step()
+        optimizer.step()
         
         epoch_loss += loss.item() * inputs.size(0)
 
@@ -82,19 +78,12 @@ def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=20):
             if (batch_idx + 1) % memory_cleanup_frequency == 0:
                 del inputs, targets, class_targets, outputs_object, outputs_material, predicted_object, predicted_material
                 gc.collect()
-                if device.type == 'cuda':
-                    torch.cuda.empty_cache()
-                elif 'COLAB_TPU_ADDR' in os.environ:
-                    xm.collect_xla_gc()
-
+                torch.cuda.empty_cache()
 
     # Final memory cleanup
     del inputs, targets, class_targets, outputs_object, outputs_material, predicted_object, predicted_material
     gc.collect()
-    if device.type == 'cuda':
-        torch.cuda.empty_cache()
-    elif 'COLAB_TPU_ADDR' in os.environ:
-        xm.collect_xla_gc()
+    torch.cuda.empty_cache()
 
     epoch_loss /= len(data_loader.dataset)
     
