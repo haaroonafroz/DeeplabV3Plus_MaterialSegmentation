@@ -61,15 +61,15 @@ def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=20):
             epoch_loss += loss_material.item() * inputs.size(0)
 
             # Periodic memory cleanup
-            if (batch_idx + 1) % memory_cleanup_frequency == 0:
-                del inputs, class_masks, outputs_material, predicted_material
-                gc.collect()
-                torch.cuda.empty_cache()
+            # if (batch_idx + 1) % memory_cleanup_frequency == 0:
+            #     del inputs, class_masks, outputs_material, predicted_material
+            #     gc.collect()
+            #     torch.cuda.empty_cache()
 
     # Final memory cleanup
-    del inputs, class_masks, outputs_material, predicted_material
-    gc.collect()
-    torch.cuda.empty_cache()
+    # del inputs, class_masks, outputs_material, predicted_material
+    # gc.collect()
+    # torch.cuda.empty_cache()
 
     epoch_loss /= len(data_loader.dataset)
     
