@@ -1,4 +1,6 @@
 import csv
+import os
+import yaml
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,8 +10,62 @@ import numpy as np
 from PIL import Image
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+from dlcv.config import *
 
-# ToDo import functions
+
+def cfg_node_to_dict(cfg_node):
+    """Convert a yacs CfgNode to a dictionary."""
+    if not isinstance(cfg_node, CN):
+        return cfg_node
+    else:
+        cfg_dict = dict(cfg_node)
+        for k, v in cfg_dict.items():
+            cfg_dict[k] = cfg_node_to_dict(v)
+        return cfg_dict
+
+def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
+                   horizontal_flip_prob, rotation_degrees, crop_size, milestones, gamma,
+                    early_stopping, pretrained_weights= '',
+                    root='/kaggle/input/material-dataset/material_dataset',
+                    config_dir='/kaggle/working/create_config'):
+    # Get default configuration
+    cfg = get_cfg_defaults()
+
+    # Update the configuration with provided arguments
+    cfg.DATA.ROOT = root
+    cfg.MISC.RUN_NAME = run_name
+    cfg.MODEL.BACKBONE = backbone
+    cfg.TRAIN.BASE_LR = base_lr
+    cfg.TRAIN.BATCH_SIZE = batch_size
+    cfg.TRAIN.NUM_EPOCHS = num_epochs
+    cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB = horizontal_flip_prob
+    cfg.AUGMENTATION.ROTATION_DEGREES = rotation_degrees
+    cfg.AUGMENTATION.CROP_SIZE = crop_size
+    cfg.TRAIN.MILESTONES = milestones
+    cfg.TRAIN.GAMMA = gamma
+    cfg.MISC.PRETRAINED_WEIGHTS = pretrained_weights
+    cfg.TRAIN.EARLY_STOPPING = early_stopping
+
+    # Ensure the config directory exists
+    os.makedirs(config_dir, exist_ok=True)
+
+    # Define the path for the new config file
+    config_file_path = os.path.join(config_dir, f'{run_name}.yaml')
+    #os.makedirs(config_file_path, exist_ok=True)
+
+     # Convert the config object to a dictionary
+    cfg_dict = cfg_node_to_dict(cfg)
+    
+    # Save the updated configuration to a YAML file
+    with open(config_file_path, 'w') as config_file:
+        yaml.dump(cfg_dict, config_file, default_flow_style=False)
+
+    print(f"Config file saved at: {config_file_path}")
+    with open(config_file_path, 'r') as file:
+        print(file.read())
+    return config_file_path
+
+
 def cross_entropy_4d(input, target):
     """
     Custom cross-entropy loss function for segmentation that supports 4D targets.
