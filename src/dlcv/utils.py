@@ -32,7 +32,7 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
     cfg = get_cfg_defaults()
 
     # Update the configuration with provided arguments
-    cfg.DATA.ROOT = root
+    cfg.DATA.MATERIAL_ROOT = root
     cfg.MISC.RUN_NAME = run_name
     cfg.MODEL.BACKBONE = backbone
     cfg.TRAIN.BASE_LR = base_lr

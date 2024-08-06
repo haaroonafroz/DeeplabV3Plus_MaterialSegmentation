@@ -35,7 +35,7 @@ def get_cfg_defaults():
     _C.AUGMENTATION = CN()
     _C.AUGMENTATION.HORIZONTAL_FLIP_PROB = 0.5
     _C.AUGMENTATION.ROTATION_DEGREES = 10
-    _C.AUGMENTATION.CROP_SIZE = (375, 500)  # Added crop size parameter
+    _C.AUGMENTATION.CROP_SIZE = [375, 500]  # Added crop size parameter
 
     # Miscellaneous settings
     _C.MISC = CN()
