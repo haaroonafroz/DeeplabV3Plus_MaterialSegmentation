@@ -39,11 +39,17 @@ def main(cfg, mode, image_path=None):
 
     # torch.backends.cudnn.benchmark = False  # Disable cuDNN benchmarking
 
-    train_transform = get_transforms(train=True, horizontal_flip_prob=cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB, rotation_degrees=cfg.AUGMENTATION.ROTATION_DEGREES)
+    train_transform = get_transforms(
+                                    train=True,
+                                    horizontal_flip_prob=cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB,
+                                    rotation_degrees=cfg.AUGMENTATION.ROTATION_DEGREES,
+                                    resize=(375, 500),
+                                    crop_size=cfg.AUGMENTATION.CROP_SIZE
+                                    )
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    model = DeepLabV3Plus(num_classes_object=cfg.MODEL.NUM_CLASSES_OBJECT, num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL)
+    model = get_model(num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL, backbone_name=cfg.MODEL.BACKBONE)
     model.to(device)
 
     if mode == 'single_image' and image_path:
@@ -56,11 +62,21 @@ def main(cfg, mode, image_path=None):
 
 
     else:
-        train_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, train_transform=train_transform, target_transform=target_transform, mode='train')
-        test_dataset = CustomSegmentationDataset(voc_root=cfg.DATA.VOC_ROOT, material_root=cfg.DATA.MATERIAL_ROOT, test_transform=test_transform, target_transform=target_transform, mode='test')
+        train_dataset = CustomSegmentationDataset(
+            material_root=cfg.DATA.MATERIAL_ROOT,
+            transform=train_transform,
+            target_transform=target_transform,
+            mode='train'
+        )
+        test_dataset = CustomSegmentationDataset(
+            material_root=cfg.DATA.MATERIAL_ROOT,
+            transform=test_transform,
+            target_transform=target_transform,
+            mode='test'
+        )
 
-        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=1)
-        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=1)
+        train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=4)
+        test_loader = DataLoader(test_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=False, num_workers=4)
 
         if cfg.MISC.PRETRAINED_WEIGHTS:
             model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
@@ -69,13 +85,14 @@ def main(cfg, mode, image_path=None):
             optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-            train_losses, test_losses, test_ious_object, test_ious_material = train_and_evaluate_model(
-                model, train_loader, test_loader, cross_entropy_4d, optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
-                early_stopping=cfg.TRAIN.EARLY_STOPPING)
+            train_losses, test_losses, test_ious_material = train_and_evaluate_model(
+                                                                model, train_loader, test_loader, cross_entropy_4d,
+                                                                optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
+                                                                early_stopping=cfg.TRAIN.EARLY_STOPPING)
             
-            print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU (Object): {test_ious_object[-1]:.4f}, Test IoU (Material): {test_ious_material[-1]:.4f}")
+            print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU (Material): {test_ious_material[-1]:.4f}")
             
-            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious_object, test_ious_material)
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious_material)
 
             if cfg.MISC.SAVE_MODEL_PATH:
                 save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
@@ -85,9 +102,9 @@ def main(cfg, mode, image_path=None):
                 f.write(cfg.dump())
 
         elif mode == 'test':
-            test_loss, test_iou_object, test_iou_material = evaluate_one_epoch(model, test_loader, device)
-            print(f"Test Loss: {test_loss:.4f}, Test IoU (Object): {test_iou_object:.4f}, Test IoU (Material): {test_iou_material:.4f}")
-            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, [test_loss], [test_iou_object], [test_iou_material])
+            test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device)
+            print(f"Test Loss: {test_loss:.4f}, Test IoU (Material): {test_iou_material:.4f}")
+            write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, [test_loss], [test_iou_material])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train and Evaluate a model")

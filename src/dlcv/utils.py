@@ -81,7 +81,7 @@ def freeze_layers(network, frozen_layers):
     for name, param in network.named_parameters():
         if any(layer_name in name for layer_name in frozen_layers):
             param.requires_grad = False
-    pass  # ToDo
+
 
 
 def save_model(model, path):
@@ -210,16 +210,18 @@ def predict_and_visualize(model, image_path, device):
 
     plt.show()
 
-def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 500)):
+def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 500), crop_size=None):
     """
     Creates a torchvision transform pipeline for training and testing datasets. For training, augmentations
-    such as horizontal flipping and random rotation can be included. For testing, only essential transformations
-    like normalization and converting the image to a tensor are applied.
+    such as horizontal flipping, random rotation, and random cropping can be included. For testing, only essential
+    transformations like normalization and converting the image to a tensor are applied.
 
     Args:
         train (bool): Indicates whether the transform is for training or testing. If True, augmentations are applied.
         horizontal_flip_prob (float): Probability of applying a horizontal flip to the images. Effective only if train=True.
         rotation_degrees (float): The range of degrees for random rotation. Effective only if train=True.
+        resize (tuple): The size to which the image will be resized.
+        crop_size (tuple): The size of the crop for random cropping. Effective only if train=True.
 
     Returns:
         torchvision.transforms.Compose: Composed torchvision transforms for data preprocessing.
@@ -230,12 +232,16 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, r
     # Add transforms for both training and testing
     if train:
         if horizontal_flip_prob > 0.0:
-        # Add random horizontal flip with the given probability
+            # Add random horizontal flip with the given probability
             transform_list.append(transforms.RandomHorizontalFlip(p=horizontal_flip_prob))
         
         if rotation_degrees > 0.0:
-        # Add random rotation with the given range of degrees
+            # Add random rotation with the given range of degrees
             transform_list.append(transforms.RandomRotation(degrees=rotation_degrees))
+        
+        if crop_size:
+            # Add random crop with the given size
+            transform_list.append(transforms.RandomCrop(size=crop_size))
 
     # Resize images
     transform_list.append(transforms.Resize(resize))
@@ -244,7 +250,7 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, r
     transform_list.append(transforms.ToTensor())
 
     # Normalize the pixel values of the image
-    # Normalized mean and std are derived from the ImageNet dataset and considered to be a well established starting point
+    # Normalized mean and std are derived from the ImageNet dataset and considered to be a well-established starting point
     transform_list.append(transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]))
 
     # Create a composed transform with the specified transforms

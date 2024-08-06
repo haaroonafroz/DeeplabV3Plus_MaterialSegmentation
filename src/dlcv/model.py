@@ -2,29 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
 import ssl
 import certifi
 
-# ssl._create_default_https_context = ssl.create_default_context(cafile=certifi.where())
 ssl._create_default_https_context = ssl._create_unverified_context
 
 class _SimpleSegmentationModel(nn.Module):
-    def __init__(self, backbone, classifier_object, classifier_material):
+    def __init__(self, backbone, classifier_material):
         super(_SimpleSegmentationModel, self).__init__()
         self.backbone = backbone
-        self.classifier_object = classifier_object
         self.classifier_material = classifier_material
         
     def forward(self, x):
         input_shape = x.shape[-2:]
         features = self.backbone(x)
-        x_object = self.classifier_object(features)
         x_material = self.classifier_material(features)
-        x_object = F.interpolate(x_object, size=input_shape, mode='bilinear', align_corners=False)
         x_material = F.interpolate(x_material, size=input_shape, mode='bilinear', align_corners=False)
-        return x_object, x_material
+        return x_material
 
 class ASPP(nn.Module):
     def __init__(self, in_channels, atrous_rates):
@@ -79,22 +74,6 @@ class ASPPPooling(nn.Sequential):
         x = super(ASPPPooling, self).forward(x)
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
-class MobileNetV2Backbone(nn.Module):
-    def __init__(self, pretrained=True):
-        super(MobileNetV2Backbone, self).__init__()
-        mobilenet = models.mobilenet_v2(pretrained=pretrained)
-        
-        self.low_level_layers = mobilenet.features[:4]  # Up to layer 4 (inclusive)
-        self.high_level_layers = mobilenet.features[4:]  # From layer 5 to the end
-
-        self.project_low_level = nn.Conv2d(24, 24, kernel_size=1, stride=1, padding=0, bias=False)
-
-    def forward(self, x):
-        low_level_features = self.low_level_layers(x)
-        low_level_features = self.project_low_level(low_level_features)
-        high_level_features = self.high_level_layers(low_level_features)
-        return {'low_level': low_level_features, 'high_level': high_level_features}
-
 class DeepLabV3PlusHead(nn.Module):
     def __init__(self, num_classes, aspp_dilate=[12, 24, 36]):
         super(DeepLabV3PlusHead, self).__init__()
@@ -136,18 +115,67 @@ class DeepLabV3PlusHead(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-class DeepLabV3Plus(_SimpleSegmentationModel):
-    def __init__(self, num_classes_object, num_classes_material):
-        backbone = MobileNetV2Backbone(pretrained=True)
-        classifier_object = DeepLabV3PlusHead(num_classes_object)
-        classifier_material = DeepLabV3PlusHead(num_classes_material)
-        super(DeepLabV3Plus, self).__init__(backbone, classifier_object, classifier_material)
+class MobileNetV2Backbone(nn.Module):
+    def __init__(self, pretrained=True):
+        super(MobileNetV2Backbone, self).__init__()
+        mobilenet = models.mobilenet_v2(pretrained=pretrained)
+        
+        self.low_level_layers = mobilenet.features[:4]  # Up to layer 4 (inclusive)
+        self.high_level_layers = mobilenet.features[4:]  # From layer 5 to the end
 
-def get_model(num_classes_object, num_classes_material):
-    return DeepLabV3Plus(num_classes_object, num_classes_material)
+        self.project_low_level = nn.Conv2d(24, 24, kernel_size=1, stride=1, padding=0, bias=False)
+
+    def forward(self, x):
+        low_level_features = self.low_level_layers(x)
+        low_level_features = self.project_low_level(low_level_features)
+        high_level_features = self.high_level_layers(low_level_features)
+        return {'low_level': low_level_features, 'high_level': high_level_features}
+
+class ResNetBackbone(nn.Module):
+    def __init__(self, resnet_type='resnet50', pretrained=True):
+        super(ResNetBackbone, self).__init__()
+        if resnet_type == 'resnet50':
+            resnet = models.resnet50(pretrained=pretrained)
+        elif resnet_type == 'resnet101':
+            resnet = models.resnet101(pretrained=pretrained)
+        else:
+            raise ValueError(f"Unsupported resnet_type: {resnet_type}")
+
+        self.low_level_layers = nn.Sequential(
+            resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1
+        )
+        self.high_level_layers = nn.Sequential(
+            resnet.layer2, resnet.layer3, resnet.layer4
+        )
+
+    def forward(self, x):
+        low_level_features = self.low_level_layers(x)
+        high_level_features = self.high_level_layers(low_level_features)
+        return {'low_level': low_level_features, 'high_level': high_level_features}
+
+class DeepLabV3Plus(_SimpleSegmentationModel):
+    def __init__(self, num_classes_material, backbone='mobilenet', freeze_backbone=True):
+        if backbone == 'mobilenet':
+            backbone_model = MobileNetV2Backbone(pretrained=True)
+        elif backbone in ['resnet50', 'resnet101']:
+            backbone_model = ResNetBackbone(resnet_type=backbone, pretrained=True)
+        else:
+            raise ValueError(f"Unsupported backbone: {backbone}")
+
+        classifier_material = DeepLabV3PlusHead(num_classes_material)
+        super(DeepLabV3Plus, self).__init__(backbone_model, classifier_material)
+        
+        if freeze_backbone:
+            self.freeze_backbone()
+
+    def freeze_backbone(self, freeze=True):
+        for param in self.backbone.parameters():
+            param.requires_grad = not freeze
+
+def get_model(num_classes_material, backbone='mobilenet', freeze_backbone=True):
+    return DeepLabV3Plus(num_classes_material, backbone=backbone, freeze_backbone=freeze_backbone)
 
 if __name__ == "__main__":
-    num_classes_object = 21  # Example number of classes for PASCAL VOC 2012
     num_classes_material = 4  # Example number of material classes (set as needed)
-    model = get_model(num_classes_object, num_classes_material)
+    model = get_model(num_classes_material, backbone='resnet50', freeze_backbone=True)
     print(model)

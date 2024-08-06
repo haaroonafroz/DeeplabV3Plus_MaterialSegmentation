@@ -10,14 +10,15 @@ def get_cfg_defaults():
 
     # Data settings
     _C.DATA = CN()
-    _C.DATA.DATASET = 'VOCSegmentation'
-    _C.DATA.VOC_ROOT = './data'
+    _C.DATA.DATASET = 'MaterialDataset'
+    #_C.DATA.VOC_ROOT = './data'
     _C.DATA.MATERIAL_ROOT = './data/material_dataset'
 
     # Model settings
     _C.MODEL = CN()
-    _C.MODEL.NUM_CLASSES_OBJECT = 21
+    #_C.MODEL.NUM_CLASSES_OBJECT = 21
     _C.MODEL.NUM_CLASSES_MATERIAL = 4
+    _C.MODEL.BACKBONE = 'mobilenet'  # Default backbone
     #_C.MODEL.NUM_BLOCKS = [3, 3, 9, 3]
     #_C.MODEL.HIDDEN_DIMS = [96, 192, 384, 768]
 
@@ -32,8 +33,9 @@ def get_cfg_defaults():
 
     # Augmentation settings
     _C.AUGMENTATION = CN()
-    _C.AUGMENTATION.HORIZONTAL_FLIP_PROB = 0.3
+    _C.AUGMENTATION.HORIZONTAL_FLIP_PROB = 0.5
     _C.AUGMENTATION.ROTATION_DEGREES = 10
+    _C.AUGMENTATION.CROP_SIZE = (375, 500)  # Added crop size parameter
 
     # Miscellaneous settings
     _C.MISC = CN()
