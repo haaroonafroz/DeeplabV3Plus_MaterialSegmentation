@@ -49,7 +49,7 @@ def main(cfg, mode, image_path=None):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    model = get_model(num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL, backbone_name=cfg.MODEL.BACKBONE)
+    model = get_model(num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL, backbone=cfg.MODEL.BACKBONE)
     model.to(device)
 
     if mode == 'single_image' and image_path:
