@@ -11,14 +11,17 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     model.train()
     epoch_loss = 0.0
 
-    for inputs, class_targets in tqdm(data_loader, desc="Training"):
-        inputs, class_targets = inputs.to(device), class_targets.to(device)
+    for inputs, binary_masks, class_masks in tqdm(data_loader, desc="Training"):
+        inputs, class_masks = inputs.to(device), class_masks.to(device)
         optimizer.zero_grad()
 
+        # Forward pass
         outputs_material = model(inputs)
         
-        loss_material = cross_entropy_4d(outputs_material, class_targets)
+        # Calculate loss
+        loss_material = cross_entropy_4d(outputs_material, class_masks)
         
+        # Backward pass
         loss_material.backward()
         optimizer.step()
         
@@ -35,33 +38,36 @@ def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=20):
     all_labels_material = []
 
     with torch.no_grad():
-        for batch_idx, (inputs, class_targets) in enumerate(tqdm(data_loader, desc="Evaluation")):
-            inputs, class_targets = inputs.to(device), class_targets.to(device)
+        for batch_idx, (inputs, binary_masks, class_masks) in enumerate(tqdm(data_loader, desc="Evaluation")):
+            inputs, class_masks = inputs.to(device), class_masks.to(device)
 
-            if class_targets.ndimension() == 4 and class_targets.size(1) == 1:
-                class_targets = class_targets.squeeze(1)
+            if class_masks.ndimension() == 4 and class_masks.size(1) == 1:
+                class_masks = class_masks.squeeze(1)
                 
-            class_targets = class_targets.long()
+            class_masks = class_masks.long()
             
             outputs_material = model(inputs)
             
-            loss_material = cross_entropy_4d(outputs_material, class_targets)
+            # Calculate loss
+            loss_material = cross_entropy_4d(outputs_material, class_masks)
             
+            # Get predictions
             _, predicted_material = torch.max(outputs_material, 1)
             
+            # Collect predictions and labels
             all_preds_material.extend(predicted_material.cpu().numpy().flatten())
-            all_labels_material.extend(class_targets.cpu().numpy().flatten())
+            all_labels_material.extend(class_masks.cpu().numpy().flatten())
             
             epoch_loss += loss_material.item() * inputs.size(0)
 
             # Periodic memory cleanup
             if (batch_idx + 1) % memory_cleanup_frequency == 0:
-                del inputs, class_targets, outputs_material, predicted_material
+                del inputs, class_masks, outputs_material, predicted_material
                 gc.collect()
                 torch.cuda.empty_cache()
 
     # Final memory cleanup
-    del inputs, class_targets, outputs_material, predicted_material
+    del inputs, class_masks, outputs_material, predicted_material
     gc.collect()
     torch.cuda.empty_cache()
 
