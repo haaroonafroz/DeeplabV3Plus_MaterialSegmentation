@@ -17,6 +17,11 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
 
         # Forward pass
         outputs_material = model(inputs)
+
+        # Debugging statement to check shapes
+        print(f"Inputs shape: {inputs.shape}")
+        print(f"Outputs shape: {outputs_material.shape}")
+        print(f"Class masks shape: {class_masks.shape}")
         
         # Calculate loss
         loss_material = cross_entropy_4d(outputs_material, class_masks)

@@ -33,8 +33,7 @@ class CustomSegmentationDataset(Dataset):
         binary_mask = Image.open(self.material_binary_masks[idx]).convert("L")
         class_mask = Image.open(self.material_class_masks[idx]).convert("L")
 
-        # Resize the class mask
-        # Resize images and masks
+        # Resize
         image = image.resize((375, 375), Image.BILINEAR)
         binary_mask = binary_mask.resize((375, 375), Image.NEAREST)
         class_mask = class_mask.resize((375, 375), Image.NEAREST)
