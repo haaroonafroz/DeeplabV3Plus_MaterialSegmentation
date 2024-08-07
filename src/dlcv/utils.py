@@ -266,7 +266,7 @@ def predict_and_visualize(model, image_path, device):
 
     plt.show()
 
-def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 500), crop_size=None):
+def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(375, 375), crop_size=None):
     """
     Creates a torchvision transform pipeline for training and testing datasets. For training, augmentations
     such as horizontal flipping, random rotation, and random cropping can be included. For testing, only essential
@@ -316,7 +316,7 @@ def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, r
 
 def get_target_transform():
     return transforms.Compose([
-        transforms.Resize((375, 500)),
+        transforms.Resize((375, 375), interpolation=transforms.InterpolationMode.NEAREST),
         transforms.ToTensor()
     ])
 
