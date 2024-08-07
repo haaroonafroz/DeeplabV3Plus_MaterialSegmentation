@@ -148,10 +148,10 @@ def save_model(model, path):
         model (nn.Module): The PyTorch model to save. Only the state_dict should be saved.
         path (str): The path where to save the model. Without the postifix .pth
     """
+    os.makedirs(path, exist_ok=True)
     # Ensure device independence
     model_state = model.to(torch.device('cpu')).state_dict()
     torch.save(model_state, path + ".pth")
-    pass  # ToDo
 
 
 def get_stratified_param_groups(network, base_lr=0.001, stratification_rates=None):
@@ -225,6 +225,7 @@ def predict_and_visualize(model, image_path, device):
         device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
         transform (torchvision.transforms): The transformations to apply to the input image.
     """
+    model = load_pretrained_weights(model, device, path= '/kaggle/working/saved_models/kaggle_test_run.pth')
     model.eval()  # Set the model to evaluation mode
 
     try:
@@ -338,6 +339,8 @@ def write_results_to_csv(file_path, train_losses, test_losses, test_ious):
         test_losses (list): List of testing losses.
         test_accuracies (list): List of testing accuracies.
     """
+    os.makedirs(file_path, exist_ok=True)
+
     with open(file_path + ".csv", mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Epoch', 'Train Loss', 'Test Loss', 'Test IoU'])
