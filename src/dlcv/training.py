@@ -8,27 +8,26 @@ import numpy as np
 from dlcv.utils import cross_entropy_4d
 from torch.cuda.amp import GradScaler, autocast
 
-def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, accumulation_steps=4):
+def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
     model.train()
     epoch_loss = 0.0
-    optimizer.zero_grad()
+    # optimizer.zero_grad()
 
-    for i, (inputs, binary_masks, class_masks) in tqdm(data_loader, desc="Training"):
+    for inputs, binary_masks, class_masks in tqdm(data_loader, desc="Training"):
         inputs, class_masks = inputs.to(device), class_masks.to(device)
+        optimizer.zero_grad()
         
 
         with autocast():
             # Forward pass
             outputs_material = model(inputs)        
             # Calculate loss
-            loss_material = cross_entropy_4d(outputs_material, class_masks) / accumulation_steps
+            loss_material = cross_entropy_4d(outputs_material, class_masks)
         
         # Backward pass
         scaler.scale(loss_material).backward()
-        if (i + 1) % accumulation_steps == 0:
-            scaler.step(optimizer)
-            scaler.update()
-            optimizer.zero_grad()
+        scaler.step(optimizer)
+        scaler.update()
         
         epoch_loss += loss_material.item() * inputs.size(0)
 
