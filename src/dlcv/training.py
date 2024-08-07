@@ -6,29 +6,29 @@ import os
 from sklearn.metrics import jaccard_score
 import numpy as np
 from dlcv.utils import cross_entropy_4d
+from torch.cuda.amp import GradScaler, autocast
 
-def train_one_epoch(model, data_loader, criterion, optimizer, device):
+def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, accumulation_steps=4):
     model.train()
     epoch_loss = 0.0
+    optimizer.zero_grad()
 
-    for inputs, binary_masks, class_masks in tqdm(data_loader, desc="Training"):
+    for i, (inputs, binary_masks, class_masks) in tqdm(data_loader, desc="Training"):
         inputs, class_masks = inputs.to(device), class_masks.to(device)
-        optimizer.zero_grad()
-
-        # Forward pass
-        outputs_material = model(inputs)
-
-        # Debugging statement to check shapes
-        print(f"Inputs shape: {inputs.shape}")
-        print(f"Outputs shape: {outputs_material.shape}")
-        print(f"Class masks shape: {class_masks.shape}")
         
-        # Calculate loss
-        loss_material = cross_entropy_4d(outputs_material, class_masks)
+
+        with autocast():
+            # Forward pass
+            outputs_material = model(inputs)        
+            # Calculate loss
+            loss_material = cross_entropy_4d(outputs_material, class_masks) / accumulation_steps
         
         # Backward pass
-        loss_material.backward()
-        optimizer.step()
+        scaler.scale(loss_material).backward()
+        if (i + 1) % accumulation_steps == 0:
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
         
         epoch_loss += loss_material.item() * inputs.size(0)
 
@@ -72,9 +72,9 @@ def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=15):
                 torch.cuda.empty_cache()
 
     # Final memory cleanup
-    # del inputs, class_masks, outputs_material, predicted_material
-    # gc.collect()
-    # torch.cuda.empty_cache()
+    del inputs, class_masks, outputs_material, predicted_material
+    gc.collect()
+    torch.cuda.empty_cache()
 
     epoch_loss /= len(data_loader.dataset)
     
@@ -107,6 +107,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     test_ious_material = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
+    scaler = GradScaler()
 
     for epoch in range(num_epochs):
         # Gradual unfreezing
@@ -117,7 +118,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
             for param in model.backbone.parameters():
                 param.requires_grad = True
 
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
         train_losses.append(train_loss)
 
         test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device)
