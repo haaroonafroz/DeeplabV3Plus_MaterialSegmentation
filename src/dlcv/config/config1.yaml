@@ -1,11 +1,12 @@
 DATA:
-  DATASET: 'VOCSegmentation'
-  VOC_ROOT: './data'
+  DATASET: 'Material Dataset'
+  #VOC_ROOT: './data'
   MATERIAL_ROOT: './data/material_dataset'
 
 MODEL:
-  NUM_CLASSES_OBJECT: 21
+  #NUM_CLASSES_OBJECT: 21
   NUM_CLASSES_MATERIAL: 4
+  BACKBONE: 'mobilenet'
 
 MISC:
   RUN_NAME: 'DeeplabV3Plus_TestRun'
@@ -25,3 +26,4 @@ TRAIN:
 AUGMENTATION:
   HORIZONTAL_FLIP_PROB: 0.5
   ROTATION_DEGREES: 10
+  CROP_SIZE: [128,128]

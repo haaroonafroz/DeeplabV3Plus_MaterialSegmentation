@@ -20,7 +20,8 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
 
         with autocast():
             # Forward pass
-            outputs_material = model(inputs)        
+            outputs_material = model(inputs)
+            class_masks = class_masks.long()        
             # Calculate loss
             loss_material = cross_entropy_4d(outputs_material, class_masks)
         

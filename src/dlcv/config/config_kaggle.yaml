@@ -4,6 +4,7 @@ DATA:
 
 MODEL:
   NUM_CLASSES_MATERIAL: 4
+  BACKBONE: 'mobilenet'
 
 MISC:
   RUN_NAME: 'DeeplabV3Plus_KaggleRun'
