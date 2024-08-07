@@ -42,17 +42,17 @@ class CustomSegmentationDataset(Dataset):
         class_mask = class_mask.resize((256,256), Image.NEAREST)
 
         # Downsample the class mask using max pooling
-        class_mask_tensor = torch.from_numpy(np.array(class_mask)).float()
-        class_mask_downsampled = max_pooling_downsample(class_mask_tensor, self.downsample_size)
+        # class_mask_tensor = torch.from_numpy(np.array(class_mask)).float()
+        # class_mask_downsampled = max_pooling_downsample(class_mask_tensor, self.downsample_size)
 
         # Apply the appropriate transforms
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
             binary_mask = self.target_transform(binary_mask)
-            class_mask_downsampled = self.target_transform(class_mask_downsampled)
+            class_mask = self.target_transform(class_mask)
 
-        return image, binary_mask, class_mask_downsampled
+        return image, binary_mask, class_mask
     
 def max_pooling_downsample(class_mask, pool_size):
     class_mask = class_mask.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions
