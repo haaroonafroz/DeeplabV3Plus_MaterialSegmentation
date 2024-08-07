@@ -33,6 +33,10 @@ class CustomSegmentationDataset(Dataset):
         mask = Image.open(self.material_binary_masks[idx]).convert("L")
         class_mask = Image.open(self.material_class_masks[idx]).convert("L")
 
+        # Resize the class mask
+        if self.target_transform:
+            class_mask = class_mask.resize((375, 500), Image.NEAREST)
+
         # Apply the appropriate transforms
         if self.transform:
             image = self.transform(image)
