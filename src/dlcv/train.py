@@ -43,7 +43,6 @@ def main(cfg, mode, image_path=None):
                                     train=True,
                                     horizontal_flip_prob=cfg.AUGMENTATION.HORIZONTAL_FLIP_PROB,
                                     rotation_degrees=cfg.AUGMENTATION.ROTATION_DEGREES,
-                                    resize=(375, 500),
                                     crop_size=cfg.AUGMENTATION.CROP_SIZE
                                     )
     test_transform = get_transforms(train=False)
