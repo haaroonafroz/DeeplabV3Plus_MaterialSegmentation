@@ -30,7 +30,7 @@ class CustomSegmentationDataset(Dataset):
     def __getitem__(self, idx):
         # Get item from Material dataset
         image = Image.open(self.material_images[idx]).convert("RGB")
-        mask = Image.open(self.material_binary_masks[idx]).convert("L")
+        binary_mask = Image.open(self.material_binary_masks[idx]).convert("L")
         class_mask = Image.open(self.material_class_masks[idx]).convert("L")
 
         # Resize the class mask
@@ -43,7 +43,7 @@ class CustomSegmentationDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
-            mask = self.target_transform(mask)
+            binary_mask = self.target_transform(binary_mask)
             class_mask = self.target_transform(class_mask)
 
-        return image, mask, class_mask
+        return image, binary_mask, class_mask
