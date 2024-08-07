@@ -54,10 +54,10 @@ def main(cfg, mode, image_path=None):
     if mode == 'single_image' and image_path:
         if image_path is None:
             raise ValueError("Image path must be provided for single image mode")
-        if cfg.MISC.PRETRAINED_WEIGHTS:
-            model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
+        # if cfg.MISC.PRETRAINED_WEIGHTS:
+        #     model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-        predict_and_visualize(model, image_path, device)
+        predict_and_visualize(model, image_path, device, weights_path= '/kaggle/working/saved_models/Kaggle_test_run.pth')
 
 
     else:

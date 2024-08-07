@@ -215,7 +215,7 @@ def decode_segmap(image, nc=21):
     rgb = np.stack([r, g, b], axis=2)
     return rgb
 
-def predict_and_visualize(model, image_path, device):
+def predict_and_visualize(model, image_path, device, weights_path):
     """
     Predict the segmentation mask for a single image and visualize the result.
 
@@ -225,7 +225,7 @@ def predict_and_visualize(model, image_path, device):
         device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
         transform (torchvision.transforms): The transformations to apply to the input image.
     """
-    model = load_pretrained_weights(model, device, path= '/kaggle/working/saved_models/kaggle_test_run.pth')
+    model = load_pretrained_weights(model, weights_path, device)
     model.eval()  # Set the model to evaluation mode
 
     try:
