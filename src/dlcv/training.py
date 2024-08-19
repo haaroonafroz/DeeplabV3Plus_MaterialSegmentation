@@ -108,7 +108,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     test_ious_material = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
-    scaler = torch.cuda.amp.GradScaler('cuda')
+    scaler = torch.amp.GradScaler('cuda')
 
     for epoch in range(num_epochs):
         # Gradual unfreezing
