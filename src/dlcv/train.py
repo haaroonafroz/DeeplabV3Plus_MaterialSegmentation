@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 from torchvision.datasets import VOCSegmentation
 from torchvision.models.segmentation import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
 import torchvision.transforms as transforms
+from sklearn.model_selection import train_test_split
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # This package internal functions should be used here
@@ -30,8 +31,8 @@ def main(cfg, mode, image_path=None):
 
     if torch.cuda.is_available() and not cfg.MISC.NO_CUDA:
         device = torch.device("cuda")
-    elif 'COLAB_TPU_ADDR' in os.environ:  # Check for TPU environment variable
-        device = xm.xla_device()
+    # elif 'COLAB_TPU_ADDR' in os.environ:  # Check for TPU environment variable
+    #     device = xm.xla_device()
     else:
         device = torch.device("cpu")
 
@@ -57,21 +58,30 @@ def main(cfg, mode, image_path=None):
         # if cfg.MISC.PRETRAINED_WEIGHTS:
         #     model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-        predict_and_visualize(model, image_path, device, weights_path= '/kaggle/working/saved_models/Kaggle_test_run.pth')
+        predict_and_visualize(model, image_path, device, weights_path= './saved_models/Kaggle_test_run.pth')
 
 
     else:
+        with open(os.path.join(cfg.DATA.MATERIAL_ROOT, 'annotations.json'), 'r') as f:
+            annotations = json.load(f)['annotations']
+
+        # Split the annotations into training and testing sets
+        train_annotations, test_annotations = train_test_split(annotations, test_size=0.2, random_state=42)
+
+        # load dataset
         train_dataset = CustomSegmentationDataset(
             material_root=cfg.DATA.MATERIAL_ROOT,
             transform=train_transform,
             target_transform=target_transform,
-            mode='train'
+            mode='train',
+            annotations=train_annotations
         )
         test_dataset = CustomSegmentationDataset(
             material_root=cfg.DATA.MATERIAL_ROOT,
             transform=test_transform,
             target_transform=target_transform,
-            mode='test'
+            mode='test',
+            annotations=test_annotations
         )
 
         train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=2)

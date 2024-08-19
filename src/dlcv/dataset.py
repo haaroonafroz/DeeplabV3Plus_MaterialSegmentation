@@ -7,16 +7,19 @@ import numpy as np
 import torch.nn.functional as F
 
 class CustomSegmentationDataset(Dataset):
-    def __init__(self, material_root, transform=None, target_transform=None, mode='train', downsample_size=2):
+    def __init__(self, material_root, transform=None, target_transform=None, mode='train', annotations=None): #downsample_size=2)
         self.material_root = material_root
         self.transform = transform
         self.target_transform = target_transform
         self.mode = mode
-        self.downsample_size = downsample_size
+        # self.downsample_size = downsample_size
 
         # Load Material dataset annotations
-        with open(os.path.join(material_root, 'annotations.json'), 'r') as f:
-            self.material_annotations = json.load(f)['annotations']
+        if annotations is None:
+            with open(os.path.join(material_root, 'annotations.json'), 'r') as f:
+                self.material_annotations = json.load(f)['annotations']
+        else:
+            self.material_annotations = annotations
 
         # Load Material dataset images and masks
         material_image_dir = os.path.join(material_root, 'JPEGImages')

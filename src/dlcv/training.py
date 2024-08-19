@@ -6,7 +6,7 @@ import os
 from sklearn.metrics import jaccard_score
 import numpy as np
 from dlcv.utils import cross_entropy_4d
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 
 def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
     model.train()
@@ -18,7 +18,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
         optimizer.zero_grad()
         
 
-        with autocast():
+        with autocast(device_type='cuda'):
             # Forward pass
             outputs_material = model(inputs)
             class_masks = class_masks.long()        
@@ -107,7 +107,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     test_ious_material = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
-    scaler = GradScaler()
+    scaler = GradScaler(device_type='cuda')
 
     for epoch in range(num_epochs):
         # Gradual unfreezing
