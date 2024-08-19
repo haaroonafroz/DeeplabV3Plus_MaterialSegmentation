@@ -18,7 +18,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
         optimizer.zero_grad()
         
 
-        with autocast(device_type='cuda'):
+        with torch.amp.autocast(device = 'cuda'):
             # Forward pass
             outputs_material = model(inputs)
             class_masks = class_masks.long()        
@@ -107,7 +107,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     test_ious_material = []
     best_test_loss = float('inf')
     consecutive_no_improvement = 0
-    scaler = GradScaler(device_type='cuda')
+    scaler = torch.amp.GradScaler(device='cuda')
 
     for epoch in range(num_epochs):
         # Gradual unfreezing
