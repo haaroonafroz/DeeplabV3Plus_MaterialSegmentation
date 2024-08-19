@@ -6,7 +6,7 @@ import os
 from sklearn.metrics import jaccard_score
 import numpy as np
 from dlcv.utils import cross_entropy_4d
-from torch.amp import GradScaler, autocast
+from torch.cuda.amp import GradScaler, autocast
 
 def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
     model.train()
