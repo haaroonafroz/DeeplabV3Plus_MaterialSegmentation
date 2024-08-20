@@ -24,7 +24,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
             outputs_material = model(inputs)
             class_masks = class_masks.long()        
             # Calculate loss
-            loss_material = cross_entropy_4d(outputs_material, class_masks)
+            loss_material = criterion(outputs_material, class_masks)
         
         # Backward pass
         scaler.scale(loss_material).backward()

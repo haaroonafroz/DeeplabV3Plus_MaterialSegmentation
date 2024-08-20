@@ -93,9 +93,10 @@ def main(cfg, mode, image_path=None):
         if mode == 'train':
             optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
+            criterion = combined_loss()
 
             train_losses, test_losses, test_ious_material = train_and_evaluate_model(
-                                                                model, train_loader, test_loader, cross_entropy_4d,
+                                                                model, train_loader, test_loader, criterion,
                                                                 optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
                                                                 early_stopping=cfg.TRAIN.EARLY_STOPPING)
             

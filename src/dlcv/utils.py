@@ -12,6 +12,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 from dlcv.config import *
 
+## CREATE CONFIG FUNCTION
 
 def cfg_node_to_dict(cfg_node):
     """Convert a yacs CfgNode to a dictionary."""
@@ -65,6 +66,42 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
         print(file.read())
     return config_file_path
 
+##---------------------------------------------------------------------------
+
+# LOSS FUNCTION
+
+def dice_loss(preds, targets, smooth=1e-6):
+    """
+    Compute the Dice Loss between predictions and targets.
+    
+    Args:
+        preds (Tensor): Predictions from the model of shape [batch_size, num_classes, height, width].
+        targets (Tensor): Ground truth labels of shape [batch_size, height, width].
+        smooth (float): Smoothing factor to avoid division by zero.
+        
+    Returns:
+        Tensor: Computed Dice Loss.
+    """
+    # Convert logits to probabilities
+    preds = torch.softmax(preds, dim=1)
+    # Binarize predictions
+    preds = torch.argmax(preds, dim=1)
+    
+    # Convert targets to one-hot encoding
+    num_classes = preds.size(1)
+    targets_one_hot = F.one_hot(targets, num_classes=num_classes).float()
+    
+    # Compute intersection and union
+    intersection = (preds * targets_one_hot).sum(dim=[0, 2, 3])
+    union = preds.sum(dim=[0, 2, 3]) + targets_one_hot.sum(dim=[0, 2, 3])
+    
+    # Compute Dice score for each class
+    dice_scores = (2. * intersection + smooth) / (union + smooth)
+    
+    # Compute Dice Loss
+    dice_loss = 1 - dice_scores.mean()  # To be minimized
+    
+    return dice_loss
 
 def cross_entropy_4d(input, target):
     """
@@ -92,6 +129,31 @@ def cross_entropy_4d(input, target):
     target = target.view(-1)
 
     return F.cross_entropy(input, target)
+
+def combined_loss(preds, targets, alpha=0.5):
+    """
+    Compute the combined Cross-Entropy and Dice Loss.
+    
+    Args:
+        preds (Tensor): Predictions from the model of shape [batch_size, num_classes, height, width].
+        targets (Tensor): Ground truth labels of shape [batch_size, height, width].
+        alpha (float): Weight for Cross-Entropy Loss.
+        
+    Returns:
+        Tensor: Computed combined loss.
+    """
+    # Compute Cross-Entropy Loss
+    ce_loss = F.cross_entropy(preds, targets)
+    
+    # Compute Dice Loss
+    dice = dice_loss(preds, targets)
+    
+    # Combine the losses
+    loss = alpha * ce_loss + (1 - alpha) * dice
+    
+    return loss
+
+##-----------------------------------------------------------------------------------
 
 def load_pretrained_weights(network, weights_path, device):
     """
