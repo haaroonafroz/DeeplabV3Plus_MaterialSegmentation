@@ -143,7 +143,7 @@ def combined_loss(preds, targets, alpha=0.5):
         Tensor: Computed combined loss.
     """
     # Compute Cross-Entropy Loss
-    ce_loss = F.cross_entropy(preds, targets)
+    ce_loss = cross_entropy_4d(preds, targets)
     
     # Compute Dice Loss
     dice = dice_loss(preds, targets)
