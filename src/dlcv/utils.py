@@ -173,7 +173,7 @@ def load_pretrained_weights(network, weights_path, device):
         # Load the checkpoint from the saved file
     #print(network.state_dict().keys())
     checkpoint = torch.load(weights_path, map_location=device)
-    print(f"Keys in checkpoint: {checkpoint.keys()}")
+    # print(f"Keys in checkpoint: {checkpoint.keys()}")
     
     # Extract the model state_dict from the checkpoint
     loaded_keys = []
