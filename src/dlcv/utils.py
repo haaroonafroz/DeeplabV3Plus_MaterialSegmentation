@@ -84,7 +84,7 @@ def dice_loss(preds, targets, smooth=1.0):
     """
      # One-hot encode the targets
     num_classes = preds.size(1)
-    
+
     # Ensure targets are one-hot encoded and match the number of classes
     if targets.ndimension() == 3:
         targets_one_hot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()  # Shape: [batch_size, num_classes, height, width]
@@ -281,7 +281,7 @@ def decode_segmap(image, nc=21):
     rgb = np.stack([r, g, b], axis=2)
     return rgb
 
-def predict_and_visualize(model, image_path, device, weights_path):
+def predict_and_visualize(model, image_path, device, weights_path, save_path='/kaggle/working/saved_models'):
     """
     Predict the segmentation mask for a single image and visualize the result.
 
@@ -331,6 +331,8 @@ def predict_and_visualize(model, image_path, device, weights_path):
     ax[1].axis("off")
 
 
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    plt.savefig(output_filename)
     plt.show()
 
 def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(256,256), crop_size=None):
