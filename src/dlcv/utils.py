@@ -82,26 +82,22 @@ def dice_loss(preds, targets, smooth=1e-6):
     Returns:
         Tensor: Computed Dice Loss.
     """
-    # Convert logits to probabilities
-    preds = torch.softmax(preds, dim=1)
-    # Binarize predictions
-    preds = torch.argmax(preds, dim=1)
-    
-    # Convert targets to one-hot encoding
+     # One-hot encode the targets
     num_classes = preds.size(1)
-    targets_one_hot = F.one_hot(targets, num_classes=num_classes).float()
+    targets_one_hot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
     
-    # Compute intersection and union
+    # Ensure that preds and targets_one_hot have the same shape
+    if preds.size() != targets_one_hot.size():
+        raise ValueError(f"Shape mismatch: preds {preds.size()} and targets_one_hot {targets_one_hot.size()} must have the same shape")
+
+    # Compute Dice Loss
     intersection = (preds * targets_one_hot).sum(dim=[0, 2, 3])
     union = preds.sum(dim=[0, 2, 3]) + targets_one_hot.sum(dim=[0, 2, 3])
+
+    dice = (2. * intersection + smooth) / (union + smooth)
+    dice_loss_value = 1 - dice.mean()
     
-    # Compute Dice score for each class
-    dice_scores = (2. * intersection + smooth) / (union + smooth)
-    
-    # Compute Dice Loss
-    dice_loss = 1 - dice_scores.mean()  # To be minimized
-    
-    return dice_loss
+    return dice_loss_value
 
 def cross_entropy_4d(input, target):
     """
