@@ -70,7 +70,7 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
 
 # LOSS FUNCTION
 
-def dice_loss(preds, targets, smooth=1e-6):
+def dice_loss(preds, targets, smooth=1.0):
     """
     Compute the Dice Loss between predictions and targets.
     
@@ -84,20 +84,28 @@ def dice_loss(preds, targets, smooth=1e-6):
     """
      # One-hot encode the targets
     num_classes = preds.size(1)
-    targets_one_hot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
     
-    # Ensure that preds and targets_one_hot have the same shape
-    if preds.size() != targets_one_hot.size():
-        raise ValueError(f"Shape mismatch: preds {preds.size()} and targets_one_hot {targets_one_hot.size()} must have the same shape")
-
-    # Compute Dice Loss
+    # Ensure targets are one-hot encoded and match the number of classes
+    if targets.ndimension() == 3:
+        targets_one_hot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()  # Shape: [batch_size, num_classes, height, width]
+    elif targets.ndimension() == 4 and targets.size(1) == 1:
+        # If the target has a single channel dimension, squeeze it and one-hot encode
+        targets = targets.squeeze(1)
+        targets_one_hot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
+    else:
+        raise ValueError("Unexpected target dimensions: expected 3D or 4D tensor.")
+    
+    # Apply softmax to predictions to get class probabilities
+    preds = F.softmax(preds, dim=1)
+    
+    # Calculate Dice coefficient
     intersection = (preds * targets_one_hot).sum(dim=[0, 2, 3])
     union = preds.sum(dim=[0, 2, 3]) + targets_one_hot.sum(dim=[0, 2, 3])
-
-    dice = (2. * intersection + smooth) / (union + smooth)
-    dice_loss_value = 1 - dice.mean()
     
-    return dice_loss_value
+    dice = (2. * intersection + smooth) / (union + smooth)
+    dice = dice.mean()  # Average over all classes
+    
+    return 1 - dice
 
 def cross_entropy_4d(input, target):
     """
