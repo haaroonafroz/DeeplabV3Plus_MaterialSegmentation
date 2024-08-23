@@ -281,7 +281,7 @@ def decode_segmap(image, nc=21):
     rgb = np.stack([r, g, b], axis=2)
     return rgb
 
-def predict_and_visualize(model, image_path, device, weights_path, save_path='/kaggle/working/saved_models'):
+def predict_and_visualize(model, image_path, device, weights_path, save_path):
     """
     Predict the segmentation mask for a single image and visualize the result.
 

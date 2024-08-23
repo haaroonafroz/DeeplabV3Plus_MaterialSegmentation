@@ -13,6 +13,7 @@ MISC:
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
   PRETRAINED_WEIGHTS: './saved_models/Kaggle_test_run.pth' #'./saved_models/best_deeplabv3plus_resnet101_voc_os16.pth' # './saved_models/PASCALVOC_Epoch5-1.pth'
+  SAVE_PREDICTION: './saved_models'
   NO_CUDA: False
 
 TRAIN:

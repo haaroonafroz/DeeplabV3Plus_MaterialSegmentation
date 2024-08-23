@@ -58,7 +58,7 @@ def main(cfg, mode, image_path=None):
         # if cfg.MISC.PRETRAINED_WEIGHTS:
         #     model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
-        predict_and_visualize(model, image_path, device, weights_path= './saved_models/Kaggle_test_run.pth')
+        predict_and_visualize(model, image_path, device, weights_path= './saved_models/Kaggle_test_run.pth', save_path=cfg.MISC.SAVE_PREDICTION)
 
 
     else:

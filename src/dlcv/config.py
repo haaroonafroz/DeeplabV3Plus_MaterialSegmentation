@@ -43,6 +43,7 @@ def get_cfg_defaults():
     _C.MISC.RESULTS_CSV = './results'
     _C.MISC.SAVE_MODEL_PATH = './saved_models'
     _C.MISC.PRETRAINED_WEIGHTS = ''
+    _C.MISC.SAVE_PREDICTION = '/kaggle/working/saved_models'
     _C.MISC.FROZEN_LAYERS = []
     _C.MISC.NO_CUDA = False
 
