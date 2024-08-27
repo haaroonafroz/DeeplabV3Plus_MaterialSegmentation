@@ -26,7 +26,7 @@ def cfg_node_to_dict(cfg_node):
 
 def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
                    horizontal_flip_prob, rotation_degrees, crop_size, milestones, gamma,
-                    early_stopping, pretrained_weights= '',
+                    early_stopping, pretrained_weights= '', save_path='',
                     root='/kaggle/input/material-dataset/material_dataset',
                     config_dir='/kaggle/working/create_config'):
     # Get default configuration
@@ -45,6 +45,7 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
     cfg.TRAIN.MILESTONES = milestones
     cfg.TRAIN.GAMMA = gamma
     cfg.MISC.PRETRAINED_WEIGHTS = pretrained_weights
+    cfg.MISC.SAVE_PATH = save_path
     cfg.TRAIN.EARLY_STOPPING = early_stopping
 
     # Ensure the config directory exists
