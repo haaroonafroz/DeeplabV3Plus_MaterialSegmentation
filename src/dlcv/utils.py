@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import numpy as np
 from PIL import Image
 from sklearn.metrics import confusion_matrix
@@ -45,7 +46,7 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
     cfg.TRAIN.MILESTONES = milestones
     cfg.TRAIN.GAMMA = gamma
     cfg.MISC.PRETRAINED_WEIGHTS = pretrained_weights
-    cfg.MISC.SAVE_PATH = save_path
+    cfg.MISC.SAVE_PREDICTION = save_path
     cfg.TRAIN.EARLY_STOPPING = early_stopping
 
     # Ensure the config directory exists
@@ -315,26 +316,66 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         print(f"Model output type: {type(output)}")
         print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
 
-        # `output` is a tensor of shape (batch_size, num_classes, H, W)
-    output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+    # Get the predicted class for each pixel
+    _, predicted_class = torch.max(output, 1)
+    
+    # Move the predicted class back to CPU and convert to numpy array
+    predicted_class = predicted_class.squeeze().cpu().numpy()
 
-    # Decode the segmentation map to RGB
-    decoded_predictions = decode_segmap(output_predictions)
+    # Define the color map corresponding to each class
+    class_colors = {
+        0: (0.0, 0.0, 0.0, 1.0),  # Black for Background
+        1: (0.0, 0.0, 1.0, 1.0),  # Blue for Metal
+        2: (0.0, 1.0, 0.0, 1.0),  # Green for Glass
+        3: (1.0, 1.0, 0.0, 1.0),  # Yellow for Plastic
+        4: (1.0, 0.0, 0.0, 1.0)   # Red for Wood
+    }
 
-    # Visualize the original image and the predicted mask
-    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    ax[0].imshow(image)
-    ax[0].set_title("Original Image")
-    ax[0].axis("off")
+    # Create an empty image with 4 channels (RGBA)
+    height, width = predicted_class.shape
+    predicted_color_map = np.zeros((height, width, 4))
 
-    ax[1].imshow(decoded_predictions)
-    ax[1].set_title("Predicted Segmentation Mask")
-    ax[1].axis("off")
+    # Apply the color map to each pixel based on the predicted class
+    for class_id, color in class_colors.items():
+        mask = (predicted_class == class_id)
+        predicted_color_map[mask] = color
 
+    # Plot the original image and predicted color map side by side
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    axs[0].imshow(image)
+    axs[0].set_title('Original Image')
+    axs[0].axis('off')
 
-    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
-    plt.savefig(output_filename)
+    axs[1].imshow(predicted_color_map)
+    axs[1].set_title('Predicted Material Map')
+    axs[1].axis('off')
+
+    # Save the output image
+    output_image = Image.fromarray((predicted_color_map[:, :, :3] * 255).astype(np.uint8))  # Convert RGBA to RGB
+    save_prediction = os.path.join(save_path, 'predicted_map.png')
+    output_image.save(save_prediction)
+
     plt.show()
+    # # `output` is a tensor of shape (batch_size, num_classes, H, W)
+    # output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+
+    # # Decode the segmentation map to RGB
+    # decoded_predictions = decode_segmap(output_predictions)
+
+    # # Visualize the original image and the predicted mask
+    # fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    # ax[0].imshow(image)
+    # ax[0].set_title("Original Image")
+    # ax[0].axis("off")
+
+    # ax[1].imshow(decoded_predictions)
+    # ax[1].set_title("Predicted Segmentation Mask")
+    # ax[1].axis("off")
+
+
+    # output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    # plt.savefig(output_filename)
+    # plt.show()
 
 def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(256,256), crop_size=None):
     """
