@@ -356,11 +356,15 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
     axs[1].axis('off')
 
     # Save the output image
-    output_image = Image.fromarray((predicted_color_map[:, :, :3] * 255).astype(np.uint8))  # Convert RGBA to RGB
-    save_prediction = os.path.join(save_path, 'predicted_map.png')
-    output_image.save(save_prediction)
-
+    # output_image = Image.fromarray((predicted_color_map[:, :, :3] * 255).astype(np.uint8))  # Convert RGBA to RGB
+    # output_image = plt.savefig()
+    # save_prediction = os.path.join(save_path, 'predicted_map.png')
+    # output_image.save(save_prediction)
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    plt.savefig(output_filename)
     plt.show()
+
+    # plt.show()
     # # `output` is a tensor of shape (batch_size, num_classes, H, W)
     # output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
 
