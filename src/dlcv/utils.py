@@ -326,21 +326,24 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
 
     # Define the color map corresponding to each class
     class_colors = {
-        0: (0.0, 0.0, 0.0, 1.0),  # Black for Background
-        1: (0.0, 0.0, 1.0, 1.0),  # Blue for Metal
-        2: (0.0, 1.0, 0.0, 1.0),  # Green for Glass
-        3: (1.0, 1.0, 0.0, 1.0),  # Yellow for Plastic
-        4: (1.0, 0.0, 0.0, 1.0)   # Red for Wood
+        0: (0, 0, 0, 255),     # Black for Background
+        1: (0, 0, 255, 255),   # Blue for Metal
+        2: (0, 255, 0, 255),   # Green for Glass
+        3: (255, 255, 0, 255), # Yellow for Plastic
+        4: (255, 0, 0, 255)    # Red for Wood
     }
 
     # Create an empty image with 4 channels (RGBA)
     height, width = predicted_class.shape
-    predicted_color_map = np.zeros((height, width, 4))
+    predicted_color_map = np.zeros((height, width, 4), dtype=np.uint8)
 
     # Apply the color map to each pixel based on the predicted class
     for class_id, color in class_colors.items():
         mask = (predicted_class == class_id)
         predicted_color_map[mask] = color
+    
+    # Convert the RGBA numpy array to an image
+    predicted_color_map_img = Image.fromarray(predicted_color_map, 'RGBA')
 
     # Plot the original image and predicted color map side by side
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
@@ -348,7 +351,7 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
     axs[0].set_title('Original Image')
     axs[0].axis('off')
 
-    axs[1].imshow(predicted_color_map)
+    axs[1].imshow(predicted_color_map_img)
     axs[1].set_title('Predicted Material Map')
     axs[1].axis('off')
 
