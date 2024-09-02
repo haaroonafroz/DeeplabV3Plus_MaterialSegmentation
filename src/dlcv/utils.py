@@ -293,6 +293,8 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
         transform (torchvision.transforms): The transformations to apply to the input image.
     """
+    os.makedirs(save_path, exist_ok=True)
+
     model = load_pretrained_weights(model, weights_path, device)
     model.eval()  # Set the model to evaluation mode
 
