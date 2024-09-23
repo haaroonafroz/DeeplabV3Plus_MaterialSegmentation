@@ -318,6 +318,61 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         print(f"Model output type: {type(output)}")
         print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
 
+    output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+
+    # Decode the segmentation map to RGB
+    decoded_predictions = decode_segmap(output_predictions)
+
+    # Visualize the original image and the predicted mask
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    ax[0].imshow(image)
+    ax[0].set_title("Original Image")
+    ax[0].axis("off")
+
+    ax[1].imshow(decoded_predictions)
+    ax[1].set_title("Predicted Segmentation Mask")
+    ax[1].axis("off")
+
+
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    plt.savefig(output_filename)
+    plt.show()
+# -----------------------------------------------------------------------------------------------------------------
+def predict_and_visualize_1(model, image_path, device, weights_path, save_path):
+    """
+    Predict the segmentation mask for a single image and visualize the result.
+
+    Args:
+        model (nn.Module): The trained model.
+        image_path (str): Path to the input image.
+        device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
+        transform (torchvision.transforms): The transformations to apply to the input image.
+    """
+    os.makedirs(save_path, exist_ok=True)
+
+    model = load_pretrained_weights(model, weights_path, device)
+    model.eval()  # Set the model to evaluation mode
+
+    try:
+        image = Image.open(image_path).convert("RGB")  # This will handle JPEG, PNG, etc.
+    except Exception as e:
+        print(f"Error opening image: {e}")
+        return
+
+    # Load and transform the input image
+    image = Image.open(image_path).convert("RGB")
+    transform = get_single_image_transform()
+    input_image = transform(image).unsqueeze(0).to(device)
+
+    print(f"Input image type: {type(input_image)}")
+    print(f"Input image shape: {input_image.shape}")
+
+    # Forward pass to get the prediction
+    with torch.no_grad():
+        output = model(input_image)
+        print(f"Model output type: {type(output)}")
+        print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
+
     # Get the predicted class for each pixel
     _, predicted_class = torch.max(output, 1)
     
@@ -355,37 +410,11 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
     axs[1].set_title('Predicted Material Map')
     axs[1].axis('off')
 
-    # Save the output image
-    # output_image = Image.fromarray((predicted_color_map[:, :, :3] * 255).astype(np.uint8))  # Convert RGBA to RGB
-    # output_image = plt.savefig()
-    # save_prediction = os.path.join(save_path, 'predicted_map.png')
-    # output_image.save(save_prediction)
     output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
     plt.savefig(output_filename)
     plt.show()
 
-    # plt.show()
-    # # `output` is a tensor of shape (batch_size, num_classes, H, W)
-    # output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
-
-    # # Decode the segmentation map to RGB
-    # decoded_predictions = decode_segmap(output_predictions)
-
-    # # Visualize the original image and the predicted mask
-    # fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    # ax[0].imshow(image)
-    # ax[0].set_title("Original Image")
-    # ax[0].axis("off")
-
-    # ax[1].imshow(decoded_predictions)
-    # ax[1].set_title("Predicted Segmentation Mask")
-    # ax[1].axis("off")
-
-
-    # output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
-    # plt.savefig(output_filename)
-    # plt.show()
-
+# -------------------------------------------------------------------------------------------------------------------
 def get_transforms(train=True, horizontal_flip_prob=0.0, rotation_degrees=0.0, resize=(256,256), crop_size=None):
     """
     Creates a torchvision transform pipeline for training and testing datasets. For training, augmentations

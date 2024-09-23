@@ -55,8 +55,6 @@ def main(cfg, mode, image_path=None):
     if mode == 'single_image' and image_path:
         if image_path is None:
             raise ValueError("Image path must be provided for single image mode")
-        # if cfg.MISC.PRETRAINED_WEIGHTS:
-        #     model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
         predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION)
 
