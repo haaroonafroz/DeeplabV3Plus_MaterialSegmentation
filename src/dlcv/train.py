@@ -20,6 +20,7 @@ from dlcv.utils import *
 from dlcv.training import *
 from dlcv.dataset import *
 
+class_names = ["Background", "Metal", "Glass", "Plastic", "Wood"]
 def sum(a, b):
     x=a+b
     return x
@@ -56,7 +57,7 @@ def main(cfg, mode, image_path=None):
         if image_path is None:
             raise ValueError("Image path must be provided for single image mode")
 
-        predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION)
+        predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
 
 
     else:

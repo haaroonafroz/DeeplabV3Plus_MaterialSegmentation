@@ -12,6 +12,8 @@ from PIL import Image
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 from dlcv.config import *
+from skimage.segmentation import find_boundaries
+from skimage.measure import regionprops
 
 ## CREATE CONFIG FUNCTION
 
@@ -267,7 +269,7 @@ def voc_cmap(N=256, normalized=False):
     cmap = cmap/255 if normalized else cmap
     return cmap
 
-def decode_segmap(image, nc=21):
+def decode_segmap_1(image, nc=21):
     label_colors = voc_cmap(256)
 
     r = np.zeros_like(image).astype(np.uint8)
@@ -283,7 +285,65 @@ def decode_segmap(image, nc=21):
     rgb = np.stack([r, g, b], axis=2)
     return rgb
 
-def predict_and_visualize(model, image_path, device, weights_path, save_path):
+def decode_segmap(image, num_classes=5):  # Adjust num_classes if you have 4 materials + background
+    label_colors = np.array([
+        [0, 0, 0],        # Black background
+        [0, 0, 255],      # Blue - Metal
+        [0, 255, 0],      # Green - Glass
+        [255, 255, 0],    # Yellow - Plastic
+        [255, 0, 0]       # Red - Wood
+    ])
+
+    r = np.zeros_like(image).astype(np.uint8)
+    g = np.zeros_like(image).astype(np.uint8)
+    b = np.zeros_like(image).astype(np.uint8)
+
+    # Print unique class indices
+    unique_classes = np.unique(image)
+    print(f"Unique predicted classes: {unique_classes}")
+
+    for l in range(num_classes):
+        idx = image == l
+        r[idx] = label_colors[l, 0]
+        g[idx] = label_colors[l, 1]
+        b[idx] = label_colors[l, 2]
+
+    rgb = np.stack([r, g, b], axis=2)
+    return rgb
+
+def display_confidence_score(ax, output_softmax, predicted_mask, material_name, class_index):
+    """
+    Display the confidence score on the image for a specific class, without altering the heatmap visualization.
+
+    Args:
+        ax (matplotlib.axes): The axis to display the confidence map.
+        output_softmax (np.array): The softmax output (shape [num_classes, H, W]).
+        predicted_mask (np.array): Boolean mask where predicted class equals the current class.
+        material_name (str): The name of the material.
+        class_index (int): The index of the class to display confidence for.
+    """
+    # Extract the confidence map for the current class
+    confidence_map = output_softmax[class_index, :, :]  # Correct indexing for 3D array
+
+    # Visualize the confidence map with the heatmap
+    ax.imshow(confidence_map, cmap='hot', interpolation='nearest')
+    ax.set_title(f"{material_name} Confidence")
+    ax.axis("off")
+
+    # Calculate the average confidence score where the model predicted this class
+    predicted_confidence = confidence_map[predicted_mask]
+    avg_confidence = np.mean(predicted_confidence) if predicted_confidence.size > 0 else 0.0
+
+    # Overlay the average confidence score on top of the heatmap
+    ax.text(
+        0.5, 0.9, f"Conf: {avg_confidence:.2f}",
+        color='white', fontsize=12, fontweight='bold', ha='center', va='center',
+        transform=ax.transAxes
+    )
+
+
+# class_names = ["Background", "Metal", "Glass", "Plastic", "Wood"]
+def predict_and_visualize(model, image_path, device, weights_path, save_path, class_names):
     """
     Predict the segmentation mask for a single image and visualize the result.
 
@@ -294,8 +354,8 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         transform (torchvision.transforms): The transformations to apply to the input image.
     """
     os.makedirs(save_path, exist_ok=True)
-
-    model = load_pretrained_weights(model, weights_path, device)
+    if weights_path:
+        model = load_pretrained_weights(model, weights_path, device)
     model.eval()  # Set the model to evaluation mode
 
     try:
@@ -305,7 +365,7 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         return
 
     # Load and transform the input image
-    image = Image.open(image_path).convert("RGB")
+    # image = Image.open(image_path).convert("RGB")
     transform = get_single_image_transform()
     input_image = transform(image).unsqueeze(0).to(device)
 
@@ -317,100 +377,104 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path):
         output = model(input_image)
         print(f"Model output type: {type(output)}")
         print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
+    
+    # Apply softmax to output to get class confidence scores
+    output_softmax = F.softmax(output, dim=1).squeeze(0).cpu().numpy()
+    predicted_class = np.argmax(output_softmax, axis=0)  # Predicted class for each pixel
+
+    # Visualize the confidence maps for each class
+    num_classes = output_softmax.shape[0]
+    fig, axs = plt.subplots(1, num_classes + 1, figsize=(20, 5))
+    
+    axs[0].imshow(image)
+    axs[0].set_title("Original Image")
+    axs[0].axis("off")
+
+    # For each class, plot the confidence map
+    for i in range(num_classes):
+        axs[i + 1].imshow(output_softmax[i], cmap='hot', interpolation='nearest')
+        axs[i + 1].set_title(f"Class {i} Confidence")
+        axs[i + 1].axis("off")
+
+        # Overlay confidence score for each class on the image
+        display_confidence_score(axs[i + 1], output_softmax, predicted_class == i, material_name=class_names[i], class_index=i)
+
+    plt.tight_layout()
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_confidence_maps.png')
+    plt.savefig(output_filename)
+    plt.show()
+
+    # output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+
+    # # Decode the segmentation map to RGB
+    # decoded_predictions = decode_segmap(output_predictions, num_classes=5)
+
+    # # Visualize the original image and the predicted mask
+    # fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    # ax[0].imshow(image)
+    # ax[0].set_title("Original Image")
+    # ax[0].axis("off")
+
+    # ax[1].imshow(decoded_predictions)
+    # ax[1].set_title("Predicted Segmentation Mask")
+    # ax[1].axis("off")
+
+
+    # output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    # plt.savefig(output_filename)
+    # plt.show()
+# -----------------------------------------------------------------------------------------------------------------
+def predict_and_visualize1(model, image_path, device, weights_path, save_path):
+    """
+    Predict the segmentation mask and visualize boundaries of materials.
+    """
+    os.makedirs(save_path, exist_ok=True)
+    
+    if weights_path:
+        model = load_pretrained_weights(model, weights_path, device)
+    model.eval()  # Set the model to evaluation mode
+
+    try:
+        image = Image.open(image_path).convert("RGB")  # Open the image
+    except Exception as e:
+        print(f"Error opening image: {e}")
+        return
+
+    # Transform the input image
+    transform = get_single_image_transform()
+    input_image = transform(image).unsqueeze(0).to(device)
+
+    print(f"Input image type: {type(input_image)}")
+    print(f"Input image shape: {input_image.shape}")
+
+    # Forward pass to get the prediction
+    with torch.no_grad():
+        output = model(input_image)
+        print(f"Model output type: {type(output)}")
+        print(f"Model output shape: {output.shape}")
 
     output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
 
     # Decode the segmentation map to RGB
-    decoded_predictions = decode_segmap(output_predictions)
+    decoded_predictions = decode_segmap(output_predictions, num_classes=5)  # Modify 'nc' to the number of classes you have
 
-    # Visualize the original image and the predicted mask
+    # Find boundaries between classes
+    boundaries = find_boundaries(output_predictions, mode='outer')
+
+    # Overlay boundaries on the original image
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
     ax[0].imshow(image)
     ax[0].set_title("Original Image")
     ax[0].axis("off")
 
-    ax[1].imshow(decoded_predictions)
-    ax[1].set_title("Predicted Segmentation Mask")
+    # Overlay decoded prediction with boundaries
+    ax[1].imshow(image)
+    ax[1].imshow(decoded_predictions, alpha=0.6)  # Overlay segmentation map with some transparency
+    ax[1].contour(boundaries, colors='red')  # Draw boundaries in red
+    ax[1].set_title("Predicted Segmentation with Boundaries")
     ax[1].axis("off")
 
-
-    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
-    plt.savefig(output_filename)
-    plt.show()
-# -----------------------------------------------------------------------------------------------------------------
-def predict_and_visualize_1(model, image_path, device, weights_path, save_path):
-    """
-    Predict the segmentation mask for a single image and visualize the result.
-
-    Args:
-        model (nn.Module): The trained model.
-        image_path (str): Path to the input image.
-        device (torch.device): The device on which the model is running (e.g., 'cpu' or 'cuda').
-        transform (torchvision.transforms): The transformations to apply to the input image.
-    """
-    os.makedirs(save_path, exist_ok=True)
-
-    model = load_pretrained_weights(model, weights_path, device)
-    model.eval()  # Set the model to evaluation mode
-
-    try:
-        image = Image.open(image_path).convert("RGB")  # This will handle JPEG, PNG, etc.
-    except Exception as e:
-        print(f"Error opening image: {e}")
-        return
-
-    # Load and transform the input image
-    image = Image.open(image_path).convert("RGB")
-    transform = get_single_image_transform()
-    input_image = transform(image).unsqueeze(0).to(device)
-
-    print(f"Input image type: {type(input_image)}")
-    print(f"Input image shape: {input_image.shape}")
-
-    # Forward pass to get the prediction
-    with torch.no_grad():
-        output = model(input_image)
-        print(f"Model output type: {type(output)}")
-        print(f"Model output shape: {output.shape if isinstance(output, torch.Tensor) else 'Not a tensor'}")
-
-    # Get the predicted class for each pixel
-    _, predicted_class = torch.max(output, 1)
-    
-    # Move the predicted class back to CPU and convert to numpy array
-    predicted_class = predicted_class.squeeze().cpu().numpy()
-
-    # Define the color map corresponding to each class
-    class_colors = {
-        0: (0, 0, 0, 255),     # Black for Background
-        1: (0, 0, 255, 255),   # Blue for Metal
-        2: (0, 255, 0, 255),   # Green for Glass
-        3: (255, 255, 0, 255), # Yellow for Plastic
-        4: (255, 0, 0, 255)    # Red for Wood
-    }
-
-    # Create an empty image with 4 channels (RGBA)
-    height, width = predicted_class.shape
-    predicted_color_map = np.zeros((height, width, 4), dtype=np.uint8)
-
-    # Apply the color map to each pixel based on the predicted class
-    for class_id, color in class_colors.items():
-        mask = (predicted_class == class_id)
-        predicted_color_map[mask] = color
-    
-    # Convert the RGBA numpy array to an image
-    predicted_color_map_img = Image.fromarray(predicted_color_map, 'RGBA')
-
-    # Plot the original image and predicted color map side by side
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-    axs[0].imshow(image)
-    axs[0].set_title('Original Image')
-    axs[0].axis('off')
-
-    axs[1].imshow(predicted_color_map_img)
-    axs[1].set_title('Predicted Material Map')
-    axs[1].axis('off')
-
-    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_segmentation_with_boundaries.png')
     plt.savefig(output_filename)
     plt.show()
 

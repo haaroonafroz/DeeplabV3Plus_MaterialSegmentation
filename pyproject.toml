@@ -24,6 +24,7 @@ dependencies = [
     "tqdm",
     "matplotlib",
     "scikit-learn",
+    "scikit-image",
     "seaborn",
     "pyyaml",
     "yacs",
