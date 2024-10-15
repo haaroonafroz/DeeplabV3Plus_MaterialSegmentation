@@ -124,7 +124,7 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
         train_losses.append(train_loss)
 
-        test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device)
+        test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device, criterion)
         test_losses.append(test_loss)
         test_ious_material.append(test_iou_material)
 
