@@ -136,7 +136,7 @@ def cross_entropy_4d(input, target):
     input = input.permute(0, 2, 3, 1).contiguous().view(-1, input.size(1))
     target = target.view(-1)
 
-    return F.cross_entropy(input, target)
+    return F.cross_entropy(input, target, ignore_index=0)
 
 def combined_loss(preds, targets, alpha=0.5):
     """
@@ -326,9 +326,10 @@ def display_confidence_score(ax, output_softmax, predicted_mask, material_name, 
     confidence_map = output_softmax[class_index, :, :]  # Correct indexing for 3D array
 
     # Visualize the confidence map with the heatmap
-    ax.imshow(confidence_map, cmap='hot', interpolation='nearest')
+    heatmap = ax.imshow(confidence_map, cmap='hot', interpolation='nearest')
     ax.set_title(f"{material_name} Confidence")
     ax.axis("off")
+    # plt.colorbar(heatmap, ax=ax, fraction=0.046, pad=0.04)
 
     # Calculate the average confidence score where the model predicted this class
     predicted_confidence = confidence_map[predicted_mask]
@@ -336,10 +337,12 @@ def display_confidence_score(ax, output_softmax, predicted_mask, material_name, 
 
     # Overlay the average confidence score on top of the heatmap
     ax.text(
-        0.5, 0.9, f"Conf: {avg_confidence:.2f}",
+        0.5, 0.9, f"Mean_Conf: {avg_confidence:.2f}",
         color='white', fontsize=12, fontweight='bold', ha='center', va='center',
         transform=ax.transAxes
     )
+
+    return heatmap
 
 
 # class_names = ["Background", "Metal", "Glass", "Plastic", "Wood"]
@@ -391,14 +394,17 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
     axs[0].axis("off")
 
     # For each class, plot the confidence map
+    heatmaps = []
     for i in range(num_classes):
-        axs[i + 1].imshow(output_softmax[i], cmap='hot', interpolation='nearest')
+        heatmap = axs[i + 1].imshow(output_softmax[i], cmap='hot', interpolation='nearest')
         axs[i + 1].set_title(f"Class {i} Confidence")
         axs[i + 1].axis("off")
 
         # Overlay confidence score for each class on the image
         display_confidence_score(axs[i + 1], output_softmax, predicted_class == i, material_name=class_names[i], class_index=i)
+        heatmaps.append(heatmap)
 
+    fig.colorbar(heatmaps[0], ax=axs[1:], fraction=0.046, pad=0.04)
     plt.tight_layout()
     output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_confidence_maps.png')
     plt.savefig(output_filename)

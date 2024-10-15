@@ -20,7 +20,7 @@ from dlcv.utils import *
 from dlcv.training import *
 from dlcv.dataset import *
 
-class_names = ["Background", "Metal", "Glass", "Plastic", "Wood"]
+class_names = ["background", "Metal", "Glass", "Plastic", "Wood"]
 def sum(a, b):
     x=a+b
     return x
