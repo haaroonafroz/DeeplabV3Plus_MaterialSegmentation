@@ -418,48 +418,30 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
 
     # Visualize the confidence maps for each class
     num_classes = output_softmax.shape[0]
-    fig, axs = plt.subplots(1, num_classes + 1, figsize=(20, 5))
+    fig, axs = plt.subplots(2, 3, figsize=(15, 6))
     
-    axs[0].imshow(image)
-    axs[0].set_title("Original Image")
-    axs[0].axis("off")
+    axs[0, 0].imshow(image)
+    axs[0, 0].set_title("Original Image")
+    axs[0, 0].axis("off")
 
     # For each class, plot the confidence map
     heatmaps = []
     for i in range(num_classes):
-        heatmap = axs[i + 1].imshow(output_softmax[i], cmap='hot', interpolation='nearest')
-        axs[i + 1].set_title(f"Class {i} Confidence")
-        axs[i + 1].axis("off")
+        row, col = divmod(i + 1, 3)
+        heatmap = axs[row, col].imshow(output_softmax[i], cmap='hot', interpolation='nearest')
+        axs[row, col].set_title(f"Class {class_names[i]} Confidence")
+        axs[row, col].axis("off")
 
         # Overlay confidence score for each class on the image
-        display_confidence_score(axs[i + 1], output_softmax, predicted_class == i, material_name=class_names[i], class_index=i)
+        display_confidence_score(axs[row, col], output_softmax, predicted_class == i, material_name=class_names[i], class_index=i)
         heatmaps.append(heatmap)
 
-    fig.colorbar(heatmaps[0], ax=axs[1:], fraction=0.046, pad=0.04)
+    fig.colorbar(heatmaps[0], ax=axs, fraction=0.046, pad=0.04)
     plt.tight_layout()
     output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_confidence_maps.png')
     plt.savefig(output_filename)
     plt.show()
 
-    # output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
-
-    # # Decode the segmentation map to RGB
-    # decoded_predictions = decode_segmap(output_predictions, num_classes=5)
-
-    # # Visualize the original image and the predicted mask
-    # fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    # ax[0].imshow(image)
-    # ax[0].set_title("Original Image")
-    # ax[0].axis("off")
-
-    # ax[1].imshow(decoded_predictions)
-    # ax[1].set_title("Predicted Segmentation Mask")
-    # ax[1].axis("off")
-
-
-    # output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_prediction.png')
-    # plt.savefig(output_filename)
-    # plt.show()
 # -----------------------------------------------------------------------------------------------------------------
 def predict_and_visualize1(model, image_path, device, weights_path, save_path):
     """
@@ -499,10 +481,10 @@ def predict_and_visualize1(model, image_path, device, weights_path, save_path):
     boundaries = find_boundaries(output_predictions, mode='outer')
 
     # Overlay boundaries on the original image
-    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-    ax[0].imshow(image)
-    ax[0].set_title("Original Image")
-    ax[0].axis("off")
+    fig, ax = plt.subplots(2, 3, figsize=(15, 10))
+    ax[0, 0].imshow(image)
+    ax[0, 0].set_title("Original Image")
+    ax[0, 0].axis("off")
 
     # Overlay decoded prediction with boundaries
     ax[1].imshow(image)

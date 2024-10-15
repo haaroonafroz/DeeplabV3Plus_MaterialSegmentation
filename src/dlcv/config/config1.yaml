@@ -3,14 +3,14 @@ DATA:
   MATERIAL_ROOT: './data/material_dataset'
 
 MODEL:
-  NUM_CLASSES_MATERIAL: 4
+  NUM_CLASSES_MATERIAL: 5
   BACKBONE: 'mobilenet'
 
 MISC:
   RUN_NAME: 'DeeplabV3Plus_TestRun'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
-  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_100Epochs.pth'
+  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_3Epochs_NewModel.pth'
   SAVE_PREDICTION: './saved_models'
   NO_CUDA: False
 

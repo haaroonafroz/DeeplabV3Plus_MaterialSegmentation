@@ -110,7 +110,7 @@ def main(cfg, mode, image_path=None):
                 f.write(cfg.dump())
 
         elif mode == 'test':
-            test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device)
+            test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device, criterion= combined_loss)
             print(f"Test Loss: {test_loss:.4f}, Test IoU (Material): {test_iou_material:.4f}")
             write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, [test_loss], [test_iou_material])
 
