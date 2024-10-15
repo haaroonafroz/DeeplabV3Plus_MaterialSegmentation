@@ -111,7 +111,7 @@ def dice_loss(preds, targets, smooth=1.0):
     
     return 1 - dice
 
-def cross_entropy_4d(input, target):
+def cross_entropy_4d(input, target, smoothing = 0.1):
     """
     Custom cross-entropy loss function for segmentation that supports 4D targets.
     
@@ -136,7 +136,33 @@ def cross_entropy_4d(input, target):
     input = input.permute(0, 2, 3, 1).contiguous().view(-1, input.size(1))
     target = target.view(-1)
 
-    return F.cross_entropy(input, target, ignore_index=0)
+     # Check for any invalid values in input or target
+    if torch.isnan(input).any() or torch.isinf(input).any():
+        print("Invalid input detected in cross_entropy")
+    if torch.isnan(target).any() or torch.isinf(target).any():
+        print("Invalid target detected in cross_entropy")
+
+    # Number of classes
+    num_classes = input.size(1)
+
+    # Create one-hot encoding of targets
+    one_hot = torch.zeros_like(input).scatter_(1, target.unsqueeze(1), 1)
+
+    # Apply label smoothing
+    one_hot = one_hot * (1 - smoothing) + (smoothing / num_classes)
+
+    # Log probabilities
+    log_probs = F.log_softmax(input, dim=1)
+
+    # Calculate the loss using the smoothed labels
+    loss = - (one_hot * log_probs).sum(dim=1)
+
+    # Handle ignore_index if necessary
+    if target.eq(0).any():
+        # Set losses corresponding to ignore_index to zero
+        loss[target.eq(0)] = 0
+
+    return loss.mean()
 
 def combined_loss(preds, targets, alpha=0.5):
     """

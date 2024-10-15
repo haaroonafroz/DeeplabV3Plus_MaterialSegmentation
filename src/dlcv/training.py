@@ -22,6 +22,8 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
         with torch.autocast(device.type):
             # Forward pass
             outputs_material = model(inputs)
+            outputs_material = torch.clamp(outputs_material, min=-20, max=20)
+            
             class_masks = class_masks.long()        
             # Calculate loss
             loss_material = criterion(outputs_material, class_masks)
