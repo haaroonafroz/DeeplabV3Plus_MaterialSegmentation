@@ -100,13 +100,13 @@ def dice_loss(preds, targets, smooth=1.0):
         raise ValueError("Unexpected target dimensions: expected 3D or 4D tensor.")
     
     # Apply softmax to predictions to get class probabilities
-    preds = F.softmax(preds, dim=1)
+    # preds = F.softmax(preds, dim=1)
     
     # Calculate Dice coefficient
     intersection = (preds * targets_one_hot).sum(dim=[0, 2, 3])
-    union = preds.sum(dim=[0, 2, 3]) + targets_one_hot.sum(dim=[0, 2, 3])
+    union = preds.sum(dim=[0, 2, 3]) + targets_one_hot.sum(dim=[0, 2, 3]) + smooth
     
-    dice = (2. * intersection + smooth) / (union + smooth)
+    dice = (2. * intersection + smooth) / (union)
     dice = dice.mean()  # Average over all classes
     
     return 1 - dice
@@ -155,6 +155,11 @@ def combined_loss(preds, targets, alpha=0.5):
     
     # Compute Dice Loss
     dice = dice_loss(preds, targets)
+
+    # Check for NaNs
+    if torch.isnan(ce_loss) or torch.isnan(dice):
+        print(f"NaN detected in loss calculations: CE Loss: {ce_loss}, Dice Loss: {dice}")
+        return torch.tensor(float('nan'), device=preds.device)  # Return nan to propagate through the training process
     
     # Combine the losses
     loss = alpha * ce_loss + (1 - alpha) * dice
