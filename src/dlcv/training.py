@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 from sklearn.metrics import jaccard_score
 import numpy as np
-from dlcv.utils import cross_entropy_4d
+from dlcv.utils import *
 # from torch import GradScaler, autocast
 import torch.amp
 
@@ -39,7 +39,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
     return epoch_loss
 
 
-def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=15):
+def evaluate_one_epoch(model, data_loader, device, criterion, memory_cleanup_frequency=15):
     model.eval()
     epoch_loss = 0.0
     all_preds_material = []
@@ -57,7 +57,7 @@ def evaluate_one_epoch(model, data_loader, device, memory_cleanup_frequency=15):
             outputs_material = model(inputs)
             
             # Calculate loss
-            loss_material = cross_entropy_4d(outputs_material, class_masks)
+            loss_material = criterion(outputs_material, class_masks)
             
             # Get predictions
             _, predicted_material = torch.max(outputs_material, 1)
