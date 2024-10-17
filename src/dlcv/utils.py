@@ -436,8 +436,12 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
         display_confidence_score(axs[row, col], output_softmax, predicted_class == i, material_name=class_names[i], class_index=i)
         heatmaps.append(heatmap)
 
-    fig.colorbar(heatmaps[0], ax=axs, fraction=0.046, pad=0.04)
-    plt.tight_layout()
+    # Adjust the colorbar to be on the right side of the last column
+    cbar_ax = fig.add_axes([0.92, 0.3, 0.02, 0.4])  # [left, bottom, width, height] of the colorbar
+    fig.colorbar(heatmaps[0], cax=cbar_ax)
+
+    plt.tight_layout(rect=[0, 0, 0.9, 1])  # Leave space for colorbar on the right
+
     output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_confidence_maps.png')
     plt.savefig(output_filename)
     plt.show()

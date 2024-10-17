@@ -10,8 +10,8 @@ MISC:
   RUN_NAME: 'DeeplabV3Plus_TestRun'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
-  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_3Epochs_NewModel.pth'
-  SAVE_PREDICTION: './saved_models'
+  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_100Epochs_NewModel.pth'
+  SAVE_PREDICTION: './predictions'
   NO_CUDA: False
 
 TRAIN:
