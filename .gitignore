@@ -168,3 +168,4 @@ dlcv24_2_env/
 Github-token.txt
 .vs
 *.pth
+predictions/
