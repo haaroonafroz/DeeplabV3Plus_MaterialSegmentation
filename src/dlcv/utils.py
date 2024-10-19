@@ -13,9 +13,21 @@ from PIL import Image
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 from dlcv.config import *
+from dlcv.model import *
 from skimage.segmentation import find_boundaries
 from skimage.measure import regionprops
 import cv2
+
+def name_in_model_param():
+    model = get_model(num_classes_material=4, backbone='mobilenet', freeze_backbone=True)
+
+    # Print low-level and high-level layers for MobileNetV2 backbone
+    print("Low-Level Layers:")
+    print(model.backbone.low_level_layers)
+
+    print("\nHigh-Level Layers:")
+    print(model.backbone.high_level_layers)
+
 
 ## CREATE CONFIG FUNCTION
 
