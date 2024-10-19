@@ -112,14 +112,12 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     consecutive_no_improvement = 0
     scaler = torch.GradScaler('cuda')
 
-    # MobileNet backbone has 5 blocks
-    mobilenet_blocks = [
-        model.backbone.features[:2],   # First block (initial convolutions)
-        model.backbone.features[2:4],  # Second block
-        model.backbone.features[4:7],  # Third block
-        model.backbone.features[7:11], # Fourth block
-        model.backbone.features[11:],  # Fifth block (final block)
-    ]
+    # Use low-level and high-level layers for unfreezing
+    low_level_layers = model.backbone.low_level_layers
+    high_level_layers = model.backbone.high_level_layers
+
+    # Group the layers into blocks for gradual unfreezing
+    mobilenet_blocks = [low_level_layers] + list(high_level_layers.children())
     total_blocks = len(mobilenet_blocks)
 
     # Start unfreezing after first half of epochs
