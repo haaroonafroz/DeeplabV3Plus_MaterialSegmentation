@@ -32,7 +32,7 @@ def cfg_node_to_dict(cfg_node):
 def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
                    horizontal_flip_prob, rotation_degrees, crop_size, milestones, gamma,
                     early_stopping, pretrained_weights= '', save_path='',
-                    root='/kaggle/input/material-dataset-2/Material_dataset',
+                    root='/kaggle/input/material-dataset-new/Material_dataset',
                     config_dir='/kaggle/working/create_config'):
     # Get default configuration
     cfg = get_cfg_defaults()
