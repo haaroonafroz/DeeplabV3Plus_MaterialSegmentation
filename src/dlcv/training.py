@@ -14,7 +14,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler):
     epoch_loss = 0.0
     # optimizer.zero_grad()
 
-    for inputs, binary_masks, class_masks in tqdm(data_loader, desc="Training"):
+    for inputs, _, class_masks in tqdm(data_loader, desc="Training"):
         inputs, class_masks = inputs.to(device), class_masks.to(device)
         optimizer.zero_grad()
         
@@ -46,7 +46,7 @@ def evaluate_one_epoch(model, data_loader, device, criterion, memory_cleanup_fre
     all_labels_material = []
 
     with torch.no_grad():
-        for batch_idx, (inputs, binary_masks, class_masks) in enumerate(tqdm(data_loader, desc="Evaluation")):
+        for batch_idx, (inputs, _, class_masks) in enumerate(tqdm(data_loader, desc="Evaluation")):
             inputs, class_masks = inputs.to(device), class_masks.to(device)
 
             if class_masks.ndimension() == 4 and class_masks.size(1) == 1:
@@ -112,14 +112,39 @@ def train_and_evaluate_model(model, train_loader, test_loader, criterion, optimi
     consecutive_no_improvement = 0
     scaler = torch.GradScaler('cuda')
 
+    # MobileNet backbone has 5 blocks
+    mobilenet_blocks = [
+        model.backbone.features[:2],   # First block (initial convolutions)
+        model.backbone.features[2:4],  # Second block
+        model.backbone.features[4:7],  # Third block
+        model.backbone.features[7:11], # Fourth block
+        model.backbone.features[11:],  # Fifth block (final block)
+    ]
+    total_blocks = len(mobilenet_blocks)
+
+    # Start unfreezing after first half of epochs
+    unfreeze_start_epoch = num_epochs // 2
+
+    # Unfreeze one block every few epochs (integer-based)
+    unfreeze_frequency = (num_epochs - unfreeze_start_epoch) // total_blocks
+    if unfreeze_frequency == 0:
+        unfreeze_frequency = 1  # Ensure that we at least unfreeze one block at a time if epochs are short
+    
     for epoch in range(num_epochs):
-        # Gradual unfreezing
-        if epoch < num_epochs // 3:
-            for param in model.backbone.parameters():
-                param.requires_grad = False
-        elif epoch < 2 * num_epochs // 3:
-            for param in model.backbone.parameters():
-                param.requires_grad = True
+        # Gradual unfreezing: progressively unfreeze blocks after unfreeze_start_epoch
+        if epoch >= unfreeze_start_epoch:
+            # Calculate how many blocks to unfreeze based on current epoch
+            num_blocks_to_unfreeze = (epoch - unfreeze_start_epoch) // unfreeze_frequency + 1
+            num_blocks_to_unfreeze = min(num_blocks_to_unfreeze, total_blocks)  # Avoid unfreezing more than available blocks
+            
+            for i in range(num_blocks_to_unfreeze):
+                for param in mobilenet_blocks[i].parameters():
+                    param.requires_grad = True
+        else:
+            # Freeze all blocks in the first unfreeze_start_epoch epochs
+            for block in mobilenet_blocks:
+                for param in block.parameters():
+                    param.requires_grad = False
 
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
         train_losses.append(train_loss)

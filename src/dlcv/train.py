@@ -32,8 +32,6 @@ def main(cfg, mode, image_path=None):
 
     if torch.cuda.is_available() and not cfg.MISC.NO_CUDA:
         device = torch.device("cuda")
-    # elif 'COLAB_TPU_ADDR' in os.environ:  # Check for TPU environment variable
-    #     device = xm.xla_device()
     else:
         device = torch.device("cpu")
 
@@ -57,7 +55,8 @@ def main(cfg, mode, image_path=None):
         if image_path is None:
             raise ValueError("Image path must be provided for single image mode")
 
-        predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
+        predict_and_visualize_with_edges(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
+        #predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
 
 
     else:

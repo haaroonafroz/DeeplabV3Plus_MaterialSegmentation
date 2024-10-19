@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
 import numpy as np
 from PIL import Image
 from sklearn.metrics import confusion_matrix
@@ -14,6 +15,7 @@ import seaborn as sns
 from dlcv.config import *
 from skimage.segmentation import find_boundaries
 from skimage.measure import regionprops
+import cv2
 
 ## CREATE CONFIG FUNCTION
 
@@ -402,6 +404,8 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
     # image = Image.open(image_path).convert("RGB")
     transform = get_single_image_transform()
     input_image = transform(image).unsqueeze(0).to(device)
+    # Resize the original image to match the input dimensions (e.g., 256x256)
+    resized_image = image.resize((256, 256))
 
     print(f"Input image type: {type(input_image)}")
     print(f"Input image shape: {input_image.shape}")
@@ -420,7 +424,7 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
     num_classes = output_softmax.shape[0]
     fig, axs = plt.subplots(2, 3, figsize=(15, 6))
     
-    axs[0, 0].imshow(image)
+    axs[0, 0].imshow(resized_image)
     axs[0, 0].set_title("Original Image")
     axs[0, 0].axis("off")
 
@@ -447,57 +451,112 @@ def predict_and_visualize(model, image_path, device, weights_path, save_path, cl
     plt.show()
 
 # -----------------------------------------------------------------------------------------------------------------
-def predict_and_visualize1(model, image_path, device, weights_path, save_path):
+def apply_canny_edge_detection(image, low_threshold=100, high_threshold=200):
     """
-    Predict the segmentation mask and visualize boundaries of materials.
+    Apply Canny edge detection on the given image.
+
+    Args:
+        image (PIL.Image or np.array): Input image (resized original).
+        low_threshold (int): Low threshold for Canny edge detection.
+        high_threshold (int): High threshold for Canny edge detection.
+
+    Returns:
+        edges (np.array): Edge-detected image.
+    """
+    if isinstance(image, Image.Image):
+        image_np = np.array(image)  # Convert PIL image to numpy array
+    else:
+        image_np = image
+
+    edges = cv2.Canny(image_np, low_threshold, high_threshold)  # Apply Canny edge detection
+    return edges
+# ---------------------------
+
+def predict_and_visualize_with_edges(model, image_path, device, weights_path, save_path, class_names):
+    """
+    Predict segmentation, perform boundary detection with Canny, and color the regions based on class confidence.
+
+    Args:
+        model (nn.Module): The trained model.
+        image_path (str): Path to the input image.
+        device (torch.device): Device on which the model is running (e.g., 'cpu' or 'cuda').
+        weights_path (str): Path to the pretrained model weights.
+        save_path (str): Directory to save the result.
+        class_names (list): List of class names including background.
     """
     os.makedirs(save_path, exist_ok=True)
-    
     if weights_path:
         model = load_pretrained_weights(model, weights_path, device)
-    model.eval()  # Set the model to evaluation mode
+    model.eval()
 
+    # Load the image
     try:
-        image = Image.open(image_path).convert("RGB")  # Open the image
+        image = Image.open(image_path).convert("RGB")
     except Exception as e:
         print(f"Error opening image: {e}")
         return
 
-    # Transform the input image
     transform = get_single_image_transform()
     input_image = transform(image).unsqueeze(0).to(device)
 
-    print(f"Input image type: {type(input_image)}")
-    print(f"Input image shape: {input_image.shape}")
-
-    # Forward pass to get the prediction
+    # Forward pass to get prediction
     with torch.no_grad():
         output = model(input_image)
-        print(f"Model output type: {type(output)}")
-        print(f"Model output shape: {output.shape}")
+    
+    # Apply softmax to output to get class confidence scores
+    output_softmax = F.softmax(output, dim=1).squeeze(0).cpu().numpy()
+    predicted_class = np.argmax(output_softmax, axis=0)  # Predicted class for each pixel
 
-    output_predictions = torch.argmax(output, 1).squeeze(0).cpu().numpy()
+    # Resize the original image to match the input dimensions (e.g., 256x256)
+    resized_image = image.resize((256, 256))
 
-    # Decode the segmentation map to RGB
-    decoded_predictions = decode_segmap(output_predictions, num_classes=5)  # Modify 'nc' to the number of classes you have
+    # Apply Canny edge detection to the resized original image
+    edges = apply_canny_edge_detection(resized_image)
 
-    # Find boundaries between classes
-    boundaries = find_boundaries(output_predictions, mode='outer')
+    # Initialize an empty canvas for the raw segmentation visualization
+    height, width = predicted_class.shape
+    colored_segmentation = np.zeros((height, width, 3), dtype=np.uint8)
 
-    # Overlay boundaries on the original image
-    fig, ax = plt.subplots(2, 3, figsize=(15, 10))
-    ax[0, 0].imshow(image)
-    ax[0, 0].set_title("Original Image")
-    ax[0, 0].axis("off")
+    # Define color map for classes
+    class_colors = {
+        0: (0, 0, 0),      # background - black
+        1: (0, 0, 255),    # Metal - blue
+        2: (0, 255, 0),    # Glass - green
+        3: (255, 255, 0),  # Plastic - yellow
+        4: (255, 0, 0)     # Wood - red
+    }
 
-    # Overlay decoded prediction with boundaries
-    ax[1].imshow(image)
-    ax[1].imshow(decoded_predictions, alpha=0.6)  # Overlay segmentation map with some transparency
-    ax[1].contour(boundaries, colors='red')  # Draw boundaries in red
-    ax[1].set_title("Predicted Segmentation with Boundaries")
-    ax[1].axis("off")
+    # Fill in the predicted regions with the corresponding colors based on confidence
+    for class_idx, color in class_colors.items():
+        mask = (predicted_class == class_idx)
+        colored_segmentation[mask] = color
 
-    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_segmentation_with_boundaries.png')
+    # Create a final visualization with the Canny edges overlaid on the colored segmentation
+    colored_segmentation_with_edges = colored_segmentation.copy()
+    colored_segmentation_with_edges[edges != 0] = (255, 255, 255)  # White color for edges
+
+    # Plot the three images: resized original, raw segmentation, and segmentation with edges
+    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Resized Original Image
+    axs[0].imshow(resized_image)
+    axs[0].set_title("Original Image (256x256)")
+    axs[0].axis("off")
+
+    # Raw Segmentation (Colored by Confidence)
+    axs[1].imshow(colored_segmentation)
+    axs[1].set_title("Raw Segmentation Map")
+    axs[1].axis("off")
+
+    # Segmentation with Canny Edges
+    axs[2].imshow(colored_segmentation_with_edges)
+    axs[2].set_title("Segmentation Map with Canny Edges")
+    axs[2].axis("off")
+
+    plt.tight_layout()
+
+    # Save the result
+    output_filename = os.path.join(save_path, os.path.basename(image_path).split('.')[0] + '_segmentation_with_edges.png')
     plt.savefig(output_filename)
     plt.show()
 
