@@ -60,8 +60,8 @@ class CustomSegmentationDataset(Dataset):
         # Apply the appropriate transforms
         if self.transform:
             image = self.transform(image)
-        if self.target_transform:
-            binary_mask = self.target_transform(binary_mask)
+        # if self.target_transform:
+        #     binary_mask = self.target_transform(binary_mask)
         
         return image, binary_mask, class_mask
 
