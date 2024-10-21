@@ -314,21 +314,6 @@ def voc_cmap(N=256, normalized=False):
     cmap = cmap/255 if normalized else cmap
     return cmap
 
-def decode_segmap_1(image, nc=21):
-    label_colors = voc_cmap(256)
-
-    r = np.zeros_like(image).astype(np.uint8)
-    g = np.zeros_like(image).astype(np.uint8)
-    b = np.zeros_like(image).astype(np.uint8)
-
-    for l in range(0, nc):
-        idx = image == l
-        r[idx] = label_colors[l, 0]
-        g[idx] = label_colors[l, 1]
-        b[idx] = label_colors[l, 2]
-
-    rgb = np.stack([r, g, b], axis=2)
-    return rgb
 
 def decode_segmap(image, num_classes=5):  # Adjust num_classes if you have 4 materials + background
     label_colors = np.array([
@@ -690,41 +675,3 @@ def plot_multiple_losses_and_accuracies(model_data_list):
     plt.grid(True)
     plt.show()
     pass # ToDo
-
-def plot_samples_with_predictions(images, labels, predictions, class_names):
-    """
-    Plots a grid of images with labels and predictions, with dynamically adjusted text placement.
-
-    Args:
-        images (Tensor): Batch of images.
-        labels (Tensor): True labels corresponding to the images.
-        predictions (Tensor): Predicted labels for the images.
-        class_names (list): List of class names indexed according to labels.
-    """
-    fig, axes = plt.subplots(3, 3, figsize=(10, 10))
-    axes = axes.flatten()
-
-    for i, ax in enumerate(axes):
-        ax.imshow(images[i].permute(1, 2, 0))
-        ax.set_title(f"True: {class_names[labels[i]]}\nPredicted: {class_names[predictions[i]]}", fontsize=10)
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-    pass  # ToDo
-
-
-def plot_confusion_matrix(labels, preds, class_names):
-    """
-    Plots a confusion matrix using ground truth labels and predictions.
-    """
-    cm = confusion_matrix(labels, preds)
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, cmap='Blues', fmt=".2f", xticklabels=class_names, yticklabels=class_names)
-    plt.xlabel('Predicted labels')
-    plt.ylabel('True labels')
-    plt.title('Confusion Matrix')
-    plt.show()
-    pass  # ToDo

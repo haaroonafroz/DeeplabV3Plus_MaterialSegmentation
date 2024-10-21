@@ -16,11 +16,9 @@ def get_cfg_defaults():
 
     # Model settings
     _C.MODEL = CN()
-    #_C.MODEL.NUM_CLASSES_OBJECT = 21
     _C.MODEL.NUM_CLASSES_MATERIAL = 5
     _C.MODEL.BACKBONE = 'mobilenet'  # Default backbone
-    #_C.MODEL.NUM_BLOCKS = [3, 3, 9, 3]
-    #_C.MODEL.HIDDEN_DIMS = [96, 192, 384, 768]
+    _C.MODEL.MODEL = 'Deeplabv3Plus'    #Default model
 
     # Training settings
     _C.TRAIN = CN()

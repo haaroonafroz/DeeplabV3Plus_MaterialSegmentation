@@ -172,6 +172,43 @@ class DeepLabV3Plus(_SimpleSegmentationModel):
         for param in self.backbone.parameters():
             param.requires_grad = not freeze
 
+class UNet(nn.Module):
+    def __init__(self, num_classes):
+        super(UNet, self).__init__()
+        # MobileNetV2 as encoder (pre-trained on ImageNet)
+        mobilenet = models.mobilenet_v2(pretrained=True)
+        
+        # Use layers of MobileNetV2 as the encoder
+        self.encoder = nn.Sequential(
+            mobilenet.features[:4],   # Initial layers (low-level features)
+            mobilenet.features[4:]    # High-level features
+        )
+
+        # Decoder (upsampling layers)
+        self.upconv1 = nn.ConvTranspose2d(1280, 320, 2, stride=2)  # Transpose conv layers
+        self.upconv2 = nn.ConvTranspose2d(320, 96, 2, stride=2)
+        self.upconv3 = nn.ConvTranspose2d(96, 32, 2, stride=2)
+        self.upconv4 = nn.ConvTranspose2d(32, 24, 2, stride=2)
+
+        # Final segmentation layer
+        self.final_conv = nn.Conv2d(24, num_classes, kernel_size=1)
+
+    def forward(self, x):
+        # Encoder forward pass
+        features = self.encoder(x)
+        
+        # Decoder forward pass (upsampling)
+        x = self.upconv1(features)
+        x = self.upconv2(x)
+        x = self.upconv3(x)
+        x = self.upconv4(x)
+        
+        # Final segmentation output
+        x = self.final_conv(x)
+        return x
+def get_model_unet(num_classes):
+    return UNet(num_classes)
+
 def get_model(num_classes_material, backbone='mobilenet', freeze_backbone=True):
     return DeepLabV3Plus(num_classes_material, backbone=backbone, freeze_backbone=freeze_backbone)
 

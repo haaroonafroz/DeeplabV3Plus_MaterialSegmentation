@@ -19,6 +19,7 @@ from dlcv.model import *
 from dlcv.utils import *
 from dlcv.training import *
 from dlcv.dataset import *
+from dlcv.training_unet import *
 
 class_names = ["background", "Metal", "Glass", "Plastic", "Wood"]
 def sum(a, b):
@@ -48,7 +49,14 @@ def main(cfg, mode, image_path=None):
     test_transform = get_transforms(train=False)
     target_transform = get_target_transform()
 
-    model = get_model(num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL, backbone=cfg.MODEL.BACKBONE)
+    # Model selection based on configuration
+    if cfg.MODEL.MODEL == 'Deeplabv3Plus':
+        model = get_model(num_classes_material=cfg.MODEL.NUM_CLASSES_MATERIAL, backbone=cfg.MODEL.BACKBONE)
+    elif cfg.MODEL.MODEL == 'U-Net':
+        model = get_model_unet(num_classes=cfg.MODEL.NUM_CLASSES_MATERIAL)
+    else:
+        raise ValueError(f"Model {cfg.MODEL.MODEL} not supported. Choose 'Deeplabv3Plus' or 'U-Net'.")
+
     model.to(device)
 
     if mode == 'single_image' and image_path:
@@ -56,7 +64,7 @@ def main(cfg, mode, image_path=None):
             raise ValueError("Image path must be provided for single image mode")
 
         predict_and_visualize_with_edges(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
-        #predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
+        predict_and_visualize(model, image_path, device, weights_path= cfg.MISC.PRETRAINED_WEIGHTS, save_path=cfg.MISC.SAVE_PREDICTION, class_names=class_names)
 
 
     else:
@@ -88,28 +96,46 @@ def main(cfg, mode, image_path=None):
         if cfg.MISC.PRETRAINED_WEIGHTS:
             model = load_pretrained_weights(model, cfg.MISC.PRETRAINED_WEIGHTS, device)
 
+        # Training mode
         if mode == 'train':
             optimizer = torch.optim.Adam(model.parameters(), lr=cfg.TRAIN.BASE_LR)
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN.MILESTONES, gamma=cfg.TRAIN.GAMMA)
 
-            train_losses, test_losses, test_ious_material = train_and_evaluate_model(
-                                                                model, train_loader, test_loader, combined_loss,
-                                                                optimizer, cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler,
-                                                                early_stopping=cfg.TRAIN.EARLY_STOPPING)
-            
+            if cfg.MODEL.MODEL == 'Deeplabv3Plus':
+                # Train Deeplabv3+ model
+                train_losses, test_losses, test_ious_material = train_and_evaluate_model(
+                    model, train_loader, test_loader, combined_loss, optimizer, 
+                    cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler, early_stopping=cfg.TRAIN.EARLY_STOPPING
+                )
+            elif cfg.MODEL.MODEL == 'U-Net':
+                # Train U-Net model
+                train_losses, test_losses, test_ious_material = train_and_evaluate_model_unet(
+                    model, train_loader, test_loader, combined_loss, optimizer, 
+                    cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler, early_stopping=cfg.TRAIN.EARLY_STOPPING
+                )
+
             print(f"Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test IoU (Material): {test_ious_material[-1]:.4f}")
-            
             write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, train_losses, test_losses, test_ious_material)
 
             if cfg.MISC.SAVE_MODEL_PATH:
                 save_model(model, cfg.MISC.SAVE_MODEL_PATH + "/" + cfg.MISC.RUN_NAME)
 
+            # Save config used in this run
             config_save_path = os.path.join(cfg.MISC.SAVE_MODEL_PATH, cfg.MISC.RUN_NAME + '_runConfig.yaml')
             with open(config_save_path, 'w') as f:
                 f.write(cfg.dump())
 
+        # Test mode
         elif mode == 'test':
-            test_loss, test_iou_material = evaluate_one_epoch(model, test_loader, device, criterion= combined_loss)
+            if cfg.MODEL.MODEL == 'Deeplabv3Plus':
+                test_loss, test_iou_material = evaluate_one_epoch(
+                    model, test_loader, device, criterion=combined_loss
+                )
+            elif cfg.MODEL.MODEL == 'U-Net':
+                test_loss, test_iou_material = evaluate_one_epoch_unet(
+                    model, test_loader, device, criterion=combined_loss
+                )
+
             print(f"Test Loss: {test_loss:.4f}, Test IoU (Material): {test_iou_material:.4f}")
             write_results_to_csv(cfg.MISC.RESULTS_CSV + "/" + cfg.MISC.RUN_NAME, [test_loss], [test_iou_material])
 
