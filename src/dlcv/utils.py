@@ -41,7 +41,7 @@ def cfg_node_to_dict(cfg_node):
             cfg_dict[k] = cfg_node_to_dict(v)
         return cfg_dict
 
-def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
+def create_config(run_name, model, backbone, base_lr, batch_size, num_epochs,
                    horizontal_flip_prob, rotation_degrees, crop_size, milestones, gamma,
                     early_stopping, pretrained_weights= '', save_path='',
                     root='/kaggle/input/material-dataset-new/Material_dataset',
@@ -52,6 +52,7 @@ def create_config(run_name, backbone, base_lr, batch_size, num_epochs,
     # Update the configuration with provided arguments
     cfg.DATA.MATERIAL_ROOT = root
     cfg.MISC.RUN_NAME = run_name
+    cfg.MODEL.MODEL = model
     cfg.MODEL.BACKBONE = backbone
     cfg.TRAIN.BASE_LR = base_lr
     cfg.TRAIN.BATCH_SIZE = batch_size
