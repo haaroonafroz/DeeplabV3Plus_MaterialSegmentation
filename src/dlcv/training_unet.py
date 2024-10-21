@@ -53,10 +53,9 @@ def evaluate_one_epoch_unet(model, data_loader, device, criterion, memory_cleanu
         for batch_idx, (inputs, _, class_masks) in enumerate(tqdm(data_loader, desc="Evaluation U-Net")):
             inputs, class_masks = inputs.to(device), class_masks.to(device)
 
-            if class_masks.ndimension() == 4 and class_masks.size(1) == 1:
-                class_masks = class_masks.squeeze(1)
-
-            class_masks = class_masks.long()
+            # Resize class masks to match output shape
+            class_masks = F.interpolate(class_masks.unsqueeze(1).float(), size=(128, 128),
+                                         mode='bilinear', align_corners=False).squeeze(1).long()
 
             outputs = model(inputs)
 
