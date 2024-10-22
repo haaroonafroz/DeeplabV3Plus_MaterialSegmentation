@@ -1,63 +1,82 @@
-import argparse
-import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-import sys
 import os
-from yacs.config import CfgNode as CN
-from dlcv.config import get_cfg_defaults, get_cfg_from_file
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import csv
+import matplotlib.pyplot as plt
 
-# This package internal functions should be used here
-from torchvision.datasets import VOCSegmentation
-from dlcv.model import DeepLabV3Model
-from dlcv.utils import * #load_pretrained_weights, plot_samples_with_predictions, plot_confusion_matrix, get_transforms
+cwd = os.getcwd()
 
-def main(args):
+def read_csv_results(file_path):
+    """
+    Reads the CSV file and returns lists for epoch, train loss, test loss, and test IoU.
 
-    cfg = get_cfg_from_file(args.config_file)
+    Args:
+        file_path (str): Path to the CSV file.
+    
+    Returns:
+        epochs (list), train_losses (list), test_losses (list), test_ious (list)
+    """
+    epochs, train_losses, test_losses, test_ious = [], [], [], []
 
-    device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+    with open(file_path, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            epochs.append(int(row['Epoch']))
+            train_losses.append(float(row['Train Loss']))
+            test_losses.append(float(row['Test Loss']))
+            test_ious.append(float(row['Test IoU']))
 
-    # Load the model
-    #weights = DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1
-    model = DeepLabV3Model(num_classes=cfg.MODEL.NUM_CLASSES)
-    model.to(device)
+    return epochs, train_losses, test_losses, test_ious
 
-    # Load the data
-    transform = get_transforms(train=False)
-    target_transform = get_target_transform()
+# Manually specify the files in order
+csv_file_0_50 = cwd + '/src/dlcv/results/Semantic_Segmentation_0-50Epochs_NewDataset.csv'  
+csv_file_51_100 = cwd + '/src/dlcv/results/Semantic_Segmentation_50-100Epochs_NewDataset.csv'  
 
-    dataset = VOCSegmentation(root=cfg.DATA.ROOT, year='2012', image_set='val', download=False, transform=transform, target_transform=target_transform)
-    #dataset = test_dataset = Food101(root='/kaggle/input/food101/food-101', split='test', download=False, transform=test_transform)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+# Read results from both CSV files
+combined_epochs, combined_train_losses, combined_test_losses, combined_test_ious = [], [], [], []
 
-    model.eval()
-    all_preds = []
-    all_labels = []
-    plotted = False
-    with torch.no_grad():
-        for images, labels in tqdm(dataloader):
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+# First file (Epochs 0-50)
+epochs, train_losses, test_losses, test_ious = read_csv_results(csv_file_0_50)
+combined_epochs.extend(epochs)
+combined_train_losses.extend(train_losses)
+combined_test_losses.extend(test_losses)
+combined_test_ious.extend(test_ious)
 
-            if not plotted:
-                plot_samples_with_predictions(images.cpu(), labels.cpu(), preds.cpu(), dataset.classes) # ToDo <- add this function in utils.py
-                plotted = True  # Set flag to True after plotting once
+# Second file (Epochs 51-100)
+epochs, train_losses, test_losses, test_ious = read_csv_results(csv_file_51_100)
+# Shift epoch numbers for continuation
+last_epoch = combined_epochs[-1]
+epochs = [epoch + last_epoch for epoch in epochs]
+combined_epochs.extend(epochs)
+combined_train_losses.extend(train_losses)
+combined_test_losses.extend(test_losses)
+combined_test_ious.extend(test_ious)
 
-    plot_confusion_matrix(all_labels, all_preds, dataset.classes) # ToDo <- add this function in utils.py
+# Plot each metric individually
 
+# Plot Train Loss
+plt.figure(figsize=(10, 6))
+plt.plot(combined_epochs, combined_train_losses, label='Train Loss', color='blue')
+plt.xlabel('Epochs')
+plt.ylabel('Train Loss')
+plt.title('Training Loss- DeeplabV3+ with Mobilenet')
+plt.ylim([-2, 2])
+plt.legend(loc='best')
+plt.show()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run inference on a trained model and plot results.')
-    parser.add_argument('--config_file', type=str, required=True, help='Path to the config file used during training')
-    parser.add_argument('--saved_model_path', type=str, required=True, help='Path to the saved model weights file')
-    parser.add_argument('--batch_size', type=int, default=64, help='Batch size for inference')
-    parser.add_argument('--no_cuda', action='store_true', default=False, help='Disable CUDA even if available')
+# Plot Test Loss
+plt.figure(figsize=(10, 6))
+plt.plot(combined_epochs, combined_test_losses, label='Test Loss', color='red')
+plt.xlabel('Epochs')
+plt.ylabel('Test Loss')
+plt.title('Test Loss- DeeplabV3+ with Mobilenet')
+plt.ylim([-2, 2])
+plt.legend(loc='best')
+plt.show()
 
-    args = parser.parse_args()
-    main(args)
+# Plot Test IoU
+plt.figure(figsize=(10, 6))
+plt.plot(combined_epochs, combined_test_ious, label='Test IoU', color='green')
+plt.xlabel('Epochs')
+plt.ylabel('Test IoU')
+plt.title('Material_IoU- DeeplabV3+ with Mobilenet')
+plt.legend(loc='best')
+plt.show()

@@ -39,6 +39,7 @@ def main(cfg, mode, image_path=None):
     print(f"Device: {device}")
 
     # torch.backends.cudnn.benchmark = False  # Disable cuDNN benchmarking
+    # torch.backends.cudnn.deterministic = True
 
     train_transform = get_transforms(
                                     train=True,

@@ -211,33 +211,34 @@ def combined_loss(preds, targets, alpha=0.5):
 
 def load_pretrained_weights(network, weights_path, device):
     """
-    Loads pretrained weights (state_dict) into the specified network.
+    Loads pretrained weights (state_dict) into the specified network and adds debugging output to verify the keys.
 
     Args:
         network (nn.Module): The network into which the weights are to be loaded.
         weights_path (str or pathlib.Path): The path to the file containing the pretrained weights.
         device (torch.device): The device on which the network is running (e.g., 'cpu' or 'cuda').
-    Returns:
-        network (nn.Module): The network with the pretrained weights loaded and adjusted if necessary.
-    """
-        # Load the checkpoint from the saved file
-    #print(network.state_dict().keys())
-    checkpoint = torch.load(weights_path, map_location=device)
-    # print(f"Keys in checkpoint: {checkpoint.keys()}")
-    
-    # Extract the model state_dict from the checkpoint
-    loaded_keys = []
-    if 'model_state' in checkpoint:
-        model_state = checkpoint['model_state']
-        for key in model_state:
-            if key in network.state_dict():
-                network.state_dict()[key].copy_(model_state[key])
-                loaded_keys.append(key)
-            # else:
-            #     print(f"Warning: Key '{key}' in model_state not found in network's state_dict.")
 
-    if loaded_keys:
-        print(f"Loaded keys: {loaded_keys}")
+    Returns:
+        network (nn.Module): The network with the pretrained weights loaded.
+    """
+    print(f"Loading weights from: {weights_path}")
+    
+    # Load the checkpoint from the saved file
+    checkpoint = torch.load(weights_path, map_location=device)
+    
+    # Handle different possible structures of the checkpoint
+    if 'model_state' in checkpoint:
+        # print("Found 'model_state' in checkpoint")
+        model_state = checkpoint['model_state']
+        network.load_state_dict(model_state)
+    elif 'state_dict' in checkpoint:
+        # print("Found 'state_dict' in checkpoint")
+        network.load_state_dict(checkpoint['state_dict'])
+    elif isinstance(checkpoint, dict):
+        # print("Found state dict directly in checkpoint")
+        network.load_state_dict(checkpoint, strict=False)
+    else:
+        print("Error: No valid 'model_state' or 'state_dict' found in the checkpoint.")
     
     return network
 
@@ -524,11 +525,27 @@ def predict_and_visualize_with_edges(model, image_path, device, weights_path, sa
         4: (255, 0, 0)     # Wood - red
     }
 
+    # Initialize variables for calculating average confidence scores
+    total_pixels_per_class = np.zeros(len(class_names))
+    total_confidence_per_class = np.zeros(len(class_names))
+
     # Fill in the predicted regions with the corresponding colors based on confidence
     for class_idx, color in class_colors.items():
         mask = (predicted_class == class_idx)
         colored_segmentation[mask] = color
 
+        # Sum up the confidence scores for each class
+        total_pixels_per_class[class_idx] = mask.sum()  # Count the pixels for each class
+        total_confidence_per_class[class_idx] = output_softmax[class_idx][mask].sum()  # Sum of confidence scores for this class
+
+    # Calculate and print the average confidence for each class
+    avg_confidence_per_class = total_confidence_per_class / total_pixels_per_class
+    for class_idx, class_name in enumerate(class_names):
+        if total_pixels_per_class[class_idx] > 0:  # Avoid division by zero
+            print(f"Class '{class_name}': Average Confidence = {avg_confidence_per_class[class_idx]:.4f}")
+        else:
+            print(f"Class '{class_name}': No pixels of this class in the image.")
+    
     # Create a final visualization with the Canny edges overlaid on the colored segmentation
     colored_segmentation_with_edges = colored_segmentation.copy()
     colored_segmentation_with_edges[edges != 0] = (255, 255, 255)  # White color for edges
@@ -613,10 +630,10 @@ def get_target_transform(resize = (256,256)):
         transforms.ToTensor()
     ])
 
-def get_single_image_transform():
+def get_single_image_transform(resize = (256,256)):
     return transforms.Compose([
         # transforms.CenterCrop(256),
-        transforms.Resize((256, 256)),
+        transforms.Resize(resize),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
