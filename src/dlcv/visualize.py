@@ -27,8 +27,8 @@ def read_csv_results(file_path):
     return epochs, train_losses, test_losses, test_ious
 
 # Manually specify the files in order
-csv_file_0_50 = cwd + '/src/dlcv/results/Semantic_Segmentation_50Epochs_Unet.csv'  
-csv_file_51_100 = cwd + '/src/dlcv/results/Semantic_Segmentation_100Epochs_Unet.csv'  
+csv_file_0_50 = cwd + '/src/dlcv/results/Semantic_Segmentation_50Epochs_Deeplabv3plus.csv'  
+csv_file_51_100 = cwd + '/src/dlcv/results/Semantic_Segmentation_100Epochs_Deeplabv3plus.csv'  
 
 # Read results from both CSV files
 combined_epochs, combined_train_losses, combined_test_losses, combined_test_ious = [], [], [], []
@@ -57,7 +57,7 @@ plt.figure(figsize=(10, 6))
 plt.plot(combined_epochs, combined_train_losses, label='Train Loss', color='blue')
 plt.xlabel('Epochs')
 plt.ylabel('Train Loss')
-plt.title('Training Loss- U-Net with Mobilenet')
+plt.title('Training Loss- DeeplabV3+ with Mobilenet')
 plt.ylim([-2, 2])
 plt.legend(loc='best')
 plt.show()
@@ -67,7 +67,7 @@ plt.figure(figsize=(10, 6))
 plt.plot(combined_epochs, combined_test_losses, label='Test Loss', color='red')
 plt.xlabel('Epochs')
 plt.ylabel('Test Loss')
-plt.title('Test Loss- U-Net with Mobilenet')
+plt.title('Test Loss- DeeplabV3+ with Mobilenet')
 plt.ylim([-2, 2])
 plt.legend(loc='best')
 plt.show()
@@ -77,6 +77,6 @@ plt.figure(figsize=(10, 6))
 plt.plot(combined_epochs, combined_test_ious, label='Test IoU', color='green')
 plt.xlabel('Epochs')
 plt.ylabel('Test IoU')
-plt.title('Material_IoU- U-Net with Mobilenet')
+plt.title('Material_IoU- DeeplabV3+ with Mobilenet')
 plt.legend(loc='best')
 plt.show()

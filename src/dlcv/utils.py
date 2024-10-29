@@ -526,8 +526,8 @@ def predict_and_visualize_with_edges(model, image_path, device, weights_path, sa
     }
 
     # Initialize variables for calculating average confidence scores
-    total_pixels_per_class = np.zeros(len(class_names))
-    total_confidence_per_class = np.zeros(len(class_names))
+    # total_pixels_per_class = np.zeros(len(class_names))
+    # total_confidence_per_class = np.zeros(len(class_names))
 
     # Fill in the predicted regions with the corresponding colors based on confidence
     for class_idx, color in class_colors.items():
@@ -535,16 +535,16 @@ def predict_and_visualize_with_edges(model, image_path, device, weights_path, sa
         colored_segmentation[mask] = color
 
         # Sum up the confidence scores for each class
-        total_pixels_per_class[class_idx] = mask.sum()  # Count the pixels for each class
-        total_confidence_per_class[class_idx] = output_softmax[class_idx][mask].sum()  # Sum of confidence scores for this class
+        # total_pixels_per_class[class_idx] = mask.sum()  # Count the pixels for each class
+        # total_confidence_per_class[class_idx] = output_softmax[class_idx][mask].sum()  # Sum of confidence scores for this class
 
     # Calculate and print the average confidence for each class
-    avg_confidence_per_class = total_confidence_per_class / total_pixels_per_class
-    for class_idx, class_name in enumerate(class_names):
-        if total_pixels_per_class[class_idx] > 0:  # Avoid division by zero
-            print(f"Class '{class_name}': Average Confidence = {avg_confidence_per_class[class_idx]:.4f}")
-        else:
-            print(f"Class '{class_name}': No pixels of this class in the image.")
+    # avg_confidence_per_class = total_confidence_per_class / total_pixels_per_class
+    # for class_idx, class_name in enumerate(class_names):
+    #     if total_pixels_per_class[class_idx] > 0:  # Avoid division by zero
+    #         print(f"Class '{class_name}': Average Confidence = {avg_confidence_per_class[class_idx]:.4f}")
+    #     else:
+    #         print(f"Class '{class_name}': No pixels of this class in the image.")
     
     # Create a final visualization with the Canny edges overlaid on the colored segmentation
     colored_segmentation_with_edges = colored_segmentation.copy()
@@ -656,40 +656,3 @@ def write_results_to_csv(file_path, train_losses, test_losses, test_ious):
         writer.writerow(['Epoch', 'Train Loss', 'Test Loss', 'Test IoU'])
         for epoch in range(len(train_losses)):
             writer.writerow([epoch + 1, train_losses[epoch], test_losses[epoch], test_ious[epoch]])
-
-def plot_multiple_losses_and_accuracies(model_data_list):
-    """
-    Plots training and testing losses and accuracies for multiple models.
-
-    Args:
-        model_data_list (list of dict): A list of dictionaries containing the following keys:
-            - 'name' (str): The name of the model (for the legend)
-            - 'train_losses' (list): Training losses per epoch
-            - 'test_losses' (list): Testing losses per epoch
-            - 'test_accuracies' (list): Testing accuracies per epoch
-    """
-    # Plotting losses
-    plt.figure(figsize=(10, 5))
-    for model_data in model_data_list:
-        plt.plot(model_data['train_losses'], label=f"{model_data['name']} Train Loss")
-        plt.plot(model_data['test_losses'], label=f"{model_data['name']} Test Loss")
-
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training and Testing Losses')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-    # Plotting accuracies
-    plt.figure(figsize=(10, 5))
-    for model_data in model_data_list:
-        plt.plot(model_data['test_accuracies'], label=f"{model_data['name']} Test Accuracy")
-
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.title('Test Accuracy')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-    pass # ToDo

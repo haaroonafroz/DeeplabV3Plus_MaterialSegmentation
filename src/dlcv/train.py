@@ -27,16 +27,16 @@ def sum(a, b):
     return x
 
 def main(cfg, mode, image_path=None):
-    print(f"Using configuration file: {config_file_path}")
-    print("Configuration for this run:")
-    print(cfg.dump())
+    # print(f"Using configuration file: {config_file_path}")
+    # print("Configuration for this run:")
+    # print(cfg.dump())
 
     if torch.cuda.is_available() and not cfg.MISC.NO_CUDA:
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
 
-    print(f"Device: {device}")
+    # print(f"Device: {device}")
 
     # torch.backends.cudnn.benchmark = False  # Disable cuDNN benchmarking
     # torch.backends.cudnn.deterministic = True
@@ -105,7 +105,7 @@ def main(cfg, mode, image_path=None):
             if cfg.MODEL.MODEL == 'Deeplabv3Plus':
                 # Train Deeplabv3+ model
                 train_losses, test_losses, test_ious_material = train_and_evaluate_model(
-                    model, train_loader, test_loader, combined_loss, optimizer, 
+                    model, train_loader, test_loader, cross_entropy_4d, optimizer, 
                     cfg.TRAIN.NUM_EPOCHS, device, scheduler=scheduler, early_stopping=cfg.TRAIN.EARLY_STOPPING
                 )
             elif cfg.MODEL.MODEL == 'U-Net':

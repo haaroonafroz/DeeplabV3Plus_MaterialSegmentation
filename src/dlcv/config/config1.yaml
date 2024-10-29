@@ -5,13 +5,13 @@ DATA:
 MODEL:
   NUM_CLASSES_MATERIAL: 5
   BACKBONE: 'mobilenet'
-  MODEL: 'Deeplabv3Plus'  # 'U-Net'
+  MODEL: 'Deeplabv3Plus'   # 'U-Net'
 
 MISC:
   RUN_NAME: 'U-Net_TestRun'
   RESULTS_CSV: './results'
   SAVE_MODEL_PATH: './saved_models'
-  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_100Epochs_Deeplabv3plus.pth'
+  PRETRAINED_WEIGHTS: '.\saved_models\Semantic_Segmentation_100Epochs_Unet.pth'
   SAVE_PREDICTION: './predictions'
   NO_CUDA: False
 
