@@ -14,7 +14,7 @@ def train_one_epoch_unet(model, data_loader, criterion, optimizer, device, scale
     for inputs, _, class_masks in tqdm(data_loader, desc="Training U-Net"):
         inputs, class_masks = inputs.to(device), class_masks.to(device)
         # Resize class masks to match output shape
-        class_masks = F.interpolate(class_masks.unsqueeze(1).float(), size=(128, 128), mode='bilinear', align_corners=False).squeeze(1).long()
+        class_masks = F.interpolate(class_masks.unsqueeze(1).float(), size=(128,128), mode='bilinear', align_corners=False).squeeze(1).long()
 
         optimizer.zero_grad()
 
@@ -116,11 +116,13 @@ def train_and_evaluate_model_unet(model, train_loader, test_loader, criterion, o
     scaler = torch.GradScaler('cuda')
 
     # Low-level and high-level layers of MobileNet encoder
-    low_level_layers = model.encoder[0]  # Initial layers
-    high_level_layers = model.encoder[1]  # High-level layers
+    low_level_layers = model.encoder1  # Corresponds to encoder1 for low-level features
+    mid_level_layers = model.encoder2  # encoder2 for mid-level features
+    high_level_layers = model.encoder3  # encoder3 for high-level features
+    deep_features = model.encoder4      # encoder4 for deeper features
 
     # Group the layers into blocks for gradual unfreezing
-    mobilenet_blocks = [low_level_layers] + list(high_level_layers.children())
+    mobilenet_blocks = [low_level_layers, mid_level_layers, high_level_layers, deep_features]
     total_blocks = len(mobilenet_blocks)
 
     # Start unfreezing after first half of epochs

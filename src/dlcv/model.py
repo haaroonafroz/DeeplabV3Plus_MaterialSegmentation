@@ -8,6 +8,8 @@ import certifi
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
+# ============================DeeplabV3Plus=============================
+
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier_material):
         super(_SimpleSegmentationModel, self).__init__()
@@ -171,48 +173,55 @@ class DeepLabV3Plus(_SimpleSegmentationModel):
     def freeze_backbone(self, freeze=True):
         for param in self.backbone.parameters():
             param.requires_grad = not freeze
+def get_model(num_classes_material, backbone='mobilenet', freeze_backbone=True):
+    return DeepLabV3Plus(num_classes_material, backbone=backbone, freeze_backbone=freeze_backbone)
+
+# ==========================U-Net==============================================================
 
 class UNet(nn.Module):
     def __init__(self, num_classes):
         super(UNet, self).__init__()
         # MobileNetV2 as encoder (pre-trained on ImageNet)
         mobilenet = models.mobilenet_v2(pretrained=True)
-        
-        # Use layers of MobileNetV2 as the encoder
-        self.encoder = nn.Sequential(
-            mobilenet.features[:4],   # Initial layers (low-level features)
-            mobilenet.features[4:]    # High-level features
-        )
 
-        # Decoder (upsampling layers)
-        self.upconv1 = nn.ConvTranspose2d(1280, 320, 2, stride=2)  # Transpose conv layers
-        self.upconv2 = nn.ConvTranspose2d(320, 96, 2, stride=2)
-        self.upconv3 = nn.ConvTranspose2d(96, 32, 2, stride=2)
-        self.upconv4 = nn.ConvTranspose2d(32, 24, 2, stride=2)
+        # Use specific layers of MobileNetV2 as the encoder
+        self.encoder1 = mobilenet.features[:4]   # Low-level features (stage 1)
+        self.encoder2 = mobilenet.features[4:7]  # Mid-level features (stage 2)
+        self.encoder3 = mobilenet.features[7:14] # High-level features (stage 3)
+        self.encoder4 = mobilenet.features[14:]  # Deeper features (stage 4)
+
+        # Decoder (upsampling layers with skip connections)
+        self.upconv1 = nn.ConvTranspose2d(1280, 320, 2, stride=2)  # Stage 4 to Stage 3
+        self.upconv2 = nn.ConvTranspose2d(416, 96, 2, stride=2)  # Stage 3 to Stage 2
+        self.upconv3 = nn.ConvTranspose2d(128, 32, 2, stride=2)  # Stage 2 to Stage 1 (adjust input channels here)
+        self.upconv4 = nn.ConvTranspose2d(56, 24, 2, stride=2)  # Stage 1 to final (adjust input channels here)
 
         # Final segmentation layer
         self.final_conv = nn.Conv2d(24, num_classes, kernel_size=1)
 
     def forward(self, x):
-        # Encoder forward pass
-        features = self.encoder(x)
+        # Encoder forward pass with saved skip connections
+        x1 = self.encoder1(x)  # Stage 1
+        x2 = self.encoder2(x1) # Stage 2
+        x3 = self.encoder3(x2) # Stage 3
+        x4 = self.encoder4(x3) # Stage 4 (deepest features)
+
+        # Decoder forward pass with skip connections
+        x = self.upconv1(x4)                   # Stage 4 to Stage 3
+        x = torch.cat([x, x3], dim=1)          # Concatenate skip connection
         
-        # Decoder forward pass (upsampling)
-        x = self.upconv1(features)
-        x = self.upconv2(x)
-        x = self.upconv3(x)
-        x = self.upconv4(x)
+        x = self.upconv2(x)                    # Stage 3 to Stage 2
+        x = torch.cat([x, x2], dim=1)          # Concatenate skip connection
         
+        x = self.upconv3(x)                    # Stage 2 to Stage 1
+        x = torch.cat([x, x1], dim=1)          # Concatenate skip connection
+        
+        x = self.upconv4(x)                    # Final upsampling
+
         # Final segmentation output
         x = self.final_conv(x)
         return x
+
 def get_model_unet(num_classes):
     return UNet(num_classes)
 
-def get_model(num_classes_material, backbone='mobilenet', freeze_backbone=True):
-    return DeepLabV3Plus(num_classes_material, backbone=backbone, freeze_backbone=freeze_backbone)
-
-if __name__ == "__main__":
-    num_classes_material = 4  # Example number of material classes (set as needed)
-    model = get_model(num_classes_material, backbone='resnet50', freeze_backbone=True)
-    print(model)
